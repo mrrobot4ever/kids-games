@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Coyote Trail - Spelling Adventure</title>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#1a0a00;font-family:'Georgia',serif;touch-action:none}
+#game-container{position:relative;width:100vw;height:100vh}
+canvas{display:block}
+#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#ui-overlay>*{pointer-events:auto}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:20}
+.hud-item{background:rgba(0,0,0,.5);color:#fff;padding:5px 14px;border-radius:20px;font-size:15px;font-weight:bold;text-shadow:1px 1px 2px #000;backdrop-filter:blur(4px)}
+#word-display{position:absolute;top:18%;left:50%;transform:translate(-50%,-50%);font-size:clamp(28px,6vw,56px);font-weight:bold;color:#fff;text-shadow:3px 3px 6px rgba(0,0,0,.9),0 0 20px rgba(255,215,0,.5);letter-spacing:6px;display:none;z-index:15;text-align:center}
+#word-picture{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:clamp(48px,12vw,80px);display:none;z-index:15;text-align:center;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));line-height:1;cursor:pointer;animation:picturePulse 3s ease-in-out infinite}
+#word-picture:active{transform:translateX(-50%) scale(0.9)}
+@keyframes picturePulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.08)}}
+#answer-row{position:absolute;top:40%;left:50%;transform:translateX(-50%);display:flex;gap:5px;min-height:50px;z-index:15;justify-content:center;align-items:center;flex-wrap:wrap;max-width:92vw}
+.answer-slot{width:clamp(32px,6vw,48px);height:clamp(36px,6.5vw,52px);border:2px dashed rgba(255,255,255,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:clamp(18px,4vw,28px);font-weight:bold;color:#fff;text-shadow:1px 1px 3px #000;background:rgba(0,0,0,.2)}
+.answer-slot.filled{border-color:#FFD700;background:rgba(255,215,0,.15);border-style:solid}
+.answer-slot.correct{border-color:#4CAF50;background:rgba(76,175,80,.3);border-style:solid}
+.answer-slot.wrong{border-color:#f44336;background:rgba(244,67,54,.2);border-style:solid}
+#tile-area{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92%;z-index:15}
+.letter-tile{min-width:clamp(36px,7vw,50px);height:clamp(40px,7.5vw,54px);border:none;border-radius:10px;font-size:clamp(16px,4vw,26px);font-weight:bold;cursor:pointer;background:linear-gradient(180deg,#F5DEB3,#DEB887 60%,#C8A060);color:#3A1800;box-shadow:0 3px 0 #7A5900,0 5px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;user-select:none;padding:0 5px}
+.letter-tile:active{transform:translateY(2px);box-shadow:0 1px 0 #7A5900}
+.letter-tile.used{opacity:.2;pointer-events:none;transform:scale(.85)}
+#typing-input{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:min(260px,78vw);height:40px;font-size:18px;text-align:center;border:2px solid rgba(255,255,255,.25);border-radius:20px;background:rgba(0,0,0,.4);color:#fff;outline:none;font-family:'Georgia',serif;letter-spacing:3px;z-index:15}
+#typing-input:focus{border-color:rgba(255,215,0,.5)}
+
+#feedback{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);font-size:clamp(18px,4vw,28px);font-weight:bold;color:#fff;text-shadow:2px 2px 4px #000;z-index:16;display:none;text-align:center}
+#start-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#87CEEB 0%,#E8985E 50%,#C2703C 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.5)}
+#start-screen h1{font-size:clamp(36px,8vw,72px);margin-bottom:8px;color:#FFD700}
+#start-screen p{font-size:clamp(14px,3vw,20px);margin-bottom:24px;opacity:.9}
+#start-screen input{width:min(240px,70vw);height:40px;font-size:18px;text-align:center;border:2px solid rgba(255,255,255,.4);border-radius:20px;background:rgba(0,0,0,.3);color:#fff;outline:none;margin-bottom:14px;font-family:'Georgia',serif}
+#start-screen select{width:min(240px,70vw);height:40px;font-size:16px;text-align:center;border:2px solid rgba(255,255,255,.4);border-radius:20px;background:rgba(0,0,0,.3);color:#fff;outline:none;margin-bottom:18px;font-family:'Georgia',serif}
+#start-screen select option{background:#333;color:#fff}
+#start-btn{width:min(200px,60vw);height:48px;font-size:20px;font-weight:bold;border:none;border-radius:24px;background:linear-gradient(180deg,#FFD700,#FFA500);color:#3A1800;cursor:pointer;box-shadow:0 4px 0 #996600,0 6px 10px rgba(0,0,0,.3);font-family:'Georgia',serif}
+#start-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #996600}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="game-container">
+<div id="ui-overlay">
+<div id="hud">
+<div class="hud-item" id="hud-score">Score: 0</div>
+<div class="hud-item" id="hud-streak">Streak: 0</div>
+<div class="hud-item" id="hud-companions">Party: 1</div>
+</div>
+<div id="word-display"></div>
+<div id="word-picture"></div>
+<div id="answer-row"></div>
+
+<div id="feedback"></div>
+<div id="tile-area"></div>
+<input type="text" id="typing-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type here...">
+</div>
+<div id="start-screen">
+<h1>Coyote Trail</h1>
+<p>A Spelling Adventure</p>
+<input type="text" id="player-name" placeholder="Your name..." maxlength="20">
+<select id="grade-select">
+<option value="1">Grade 1</option>
+<option value="2">Grade 2</option>
+<option value="3">Grade 3</option>
+</select>
+<button id="start-btn">Hit the Trail!</button>
+</div>
+</div>
+
+<script>
+// ========== WORD LISTS ==========
+const WORD_PICTURES = {
+// Grade 1
+cat:'🐱',dog:'🐶',sun:'☀️',hat:'🎩',red:'🔴',big:'🐘',run:'🏃',fun:'🎉',sit:'🪑',map:'🗺️',
+bed:'🛏️',cup:'☕',top:'🔝',hot:'🔥',box:'📦',pen:'🖊️',six:'6️⃣',bus:'🚌',leg:'🦵',net:'🥅',
+fish:'🐟',tree:'🌳',bird:'🐦',frog:'🐸',cake:'🎂',bike:'🚲',home:'🏠',rain:'🌧️',boat:'⛵',star:'⭐',
+moon:'🌙',play:'🎮',book:'📖',hand:'✋',jump:'🦘',swim:'🏊',sing:'🎤',ring:'💍',bell:'🔔',duck:'🦆',
+// Grade 2
+about:'💬',again:'🔄',every:'📋',laugh:'😂',learn:'📚',light:'💡',might:'💪',never:'🚫',night:'🌃',paper:'📄',
+place:'📍',plant:'🌱',right:'➡️',small:'🐜',sound:'🔊',south:'🧭',spell:'✨',story:'📖',table:'🪑',their:'👥',
+think:'🤔',three:'3️⃣',today:'📅',under:'⬇️',water:'💧',where:'❓',which:'🔀',while:'⏳',women:'👩',world:'🌍',
+write:'✍️',young:'👶',after:'⏩',along:'🛤️',begin:'🟢',carry:'🎒',clean:'🧹',close:'🚪',could:'💭',dance:'💃',
+// Grade 3
+answer:'💡',bought:'🛒',brought:'📦',caught:'🥅',change:'🔄',course:'🏫',early:'🌅',earth:'🌎',enough:'✅',family:'👨‍👩‍👧‍👦',
+friend:'🤝',group:'👥',heard:'👂',island:'🏝️',known:'🧠',large:'🐋',listen:'👂',often:'🔁',people:'👫',picture:'🖼️',
+please:'🙏',question:'❓',ready:'👍',really:'‼️',river:'🏞️',school:'🏫',should:'📋',special:'🌟',thought:'💭',through:'🚇',
+together:'🤝',trouble:'⚠️',until:'⏰',usual:'📎',village:'🏘️',weather:'🌤️',whose:'🔍',wonder:'🤩',already:'✅'
+};
+const WORDS = {
+1: ['cat','dog','sun','hat','red','big','run','fun','sit','map','bed','cup','top','hot','box','pen','six','bus','leg','net','fish','tree','bird','frog','cake','bike','home','rain','boat','star','moon','play','book','hand','jump','swim','sing','ring','bell','duck'],
+2: ['about','again','every','laugh','learn','light','might','never','night','paper','place','plant','right','small','sound','south','spell','story','table','their','think','three','today','under','water','where','which','while','women','world','write','young','after','along','begin','carry','clean','close','could','dance'],
+3: ['answer','bought','brought','caught','change','course','early','earth','enough','family','friend','group','heard','island','known','large','learn','listen','often','people','picture','please','question','ready','really','river','school','should','special','thought','through','together','trouble','until','usual','village','weather','whose','wonder','already']
+};
+
+// ========== THEMES ==========
+const THEMES = [
+{name:'Desert Day', sky1:0x87CEEB, sky2:0xE8985E, ground:0xD2A86B, mt:0xB8860B},
+{name:'Mesa Sunset', sky1:0xFF6B35, sky2:0x8B1A1A, ground:0xA0522D, mt:0x800020},
+{name:'Canyon Night', sky1:0x0D1B2A, sky2:0x1B2838, ground:0x3E2723, mt:0x1A1A2E},
+{name:'Oasis', sky1:0x4FC3F7, sky2:0x81C784, ground:0x8BC34A, mt:0x2E7D32},
+{name:'Ancient Ruins', sky1:0xBCAAA4, sky2:0x795548, ground:0x8D6E63, mt:0x5D4037}
+];
+
+const ENCOUNTER_TYPES = ['gate','bridge','campfire','sand'];
+const COMPANION_NAMES = ['Roadrunner','Jackrabbit','Armadillo','Tortoise','Hawk','Fox','Owl','Rattlesnake','Scorpion','Eagle'];
+
+// ========== GLOBALS ==========
+let app, gameState, coyote, parallax, encounterObj;
+let score = 0, streak = 0, totalCorrect = 0, companionCount = 0;
+let currentWord = '', currentEncounter = '';
+let playerName = '', grade = 1;
+let walking = false, inEncounter = false, correctLock = false;
+let encounterGen = 0; // generation counter to scope fallback timers
+let wrongFallbackTimer = null;
+let wrongRevealInterval = null;
+let correctFallbackTimer = null;
+let mastery = {}; // word -> {correct:0, wrong:0, level:0}
+let companionsEarned = [];
+let companionSprites = [];
+let animTime = 0;
+let coyoteX = 200, coyoteScreenX = 200;
+let worldOffset = 0;
+let inputLetters = [];
+let encounterContainer;
+
+// ========== AUDIO ==========
+let audioCtx;
+function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+}
+
+function playTone(freq, dur, type='sine', vol=0.15) {
+    try {
+        const ctx = getAudio();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + dur);
+    } catch(e) {}
+}
+
+function playHowl() {
+    [300,400,500,600,700].forEach((f,i) => setTimeout(() => playTone(f, 0.4, 'sine', 0.12), i*100));
+}
+
+function playCorrect() {
+    [523,659,784].forEach((f,i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.1), i*80));
+}
+
+function playWrong() {
+    playTone(180, 0.4, 'triangle', 0.1);
+}
+
+function playFootstep() {
+    playTone(80 + Math.random()*30, 0.05, 'triangle', 0.04);
+}
+
+function playTileClick() {
+    playTone(800, 0.05, 'square', 0.06);
+}
+
+function playFanfare() {
+    [523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.1), i*120));
+}
+
+// ========== SPEECH ==========
+function speakWord(word) {
+    try {
+        const u = new SpeechSynthesisUtterance(word);
+        u.rate = 0.85;
+        u.pitch = 1;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+    } catch(e) {}
+}
+
+// ========== PERSISTENCE ==========
+function saveData() {
+    try {
+        localStorage.setItem('coyoteTrail', JSON.stringify({
+            score, totalCorrect, companionCount, companionsEarned,
+            mastery, playerName, grade
+        }));
+    } catch(e) {}
+}
+
+function loadData() {
+    try {
+        const d = JSON.parse(localStorage.getItem('coyoteTrail'));
+        if (d) {
+            score = d.score || 0;
+            totalCorrect = d.totalCorrect || 0;
+            companionCount = d.companionCount || 0;
+            companionsEarned = d.companionsEarned || [];
+            mastery = d.mastery || {};
+            if (d.playerName) document.getElementById('player-name').value = d.playerName;
+            if (d.grade) document.getElementById('grade-select').value = d.grade;
+        }
+    } catch(e) {}
+}
+
+// ========== PIXI SETUP ==========
+function initPixi() {
+    app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0x87CEEB,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true
+    });
+    document.getElementById('game-container').insertBefore(app.view, document.getElementById('ui-overlay'));
+
+    parallax = { bg: new PIXI.Container(), mid: new PIXI.Container(), fg: new PIXI.Container() };
+    app.stage.addChild(parallax.bg);
+    app.stage.addChild(parallax.mid);
+    encounterContainer = new PIXI.Container();
+    app.stage.addChild(encounterContainer);
+    app.stage.addChild(parallax.fg);
+
+    buildEnvironment();
+    coyote = createCoyote();
+    coyote.x = coyoteScreenX;
+    coyote.y = groundY() - 5;
+    app.stage.addChild(coyote);
+
+    app.ticker.add(gameLoop);
+
+    window.addEventListener('resize', () => {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+        buildEnvironment();
+    });
+}
+
+function groundY() { return app.renderer.height * 0.78; }
+function W() { return app.renderer.width; }
+function H() { return app.renderer.height; }
+
+// ========== ENVIRONMENT ==========
+function getTheme() { return THEMES[Math.floor(totalCorrect / 10) % THEMES.length]; }
+
+function buildEnvironment() {
+    const theme = getTheme();
+    parallax.bg.removeChildren();
+    parallax.mid.removeChildren();
+    parallax.fg.removeChildren();
+
+    // Sky gradient
+    const sky = new PIXI.Graphics();
+    sky.beginFill(theme.sky1);
+    sky.drawRect(0, 0, W(), H() * 0.5);
+    sky.endFill();
+    sky.beginFill(theme.sky2);
+    sky.drawRect(0, H() * 0.5, W(), H() * 0.5);
+    sky.endFill();
+    parallax.bg.addChild(sky);
+
+    // Mountains
+    for (let i = 0; i < 8; i++) {
+        const mt = new PIXI.Graphics();
+        const mx = i * W() * 0.2 - 50;
+        const mh = 80 + Math.random() * 120;
+        mt.beginFill(theme.mt, 0.6);
+        mt.moveTo(mx, groundY() - 30);
+        mt.lineTo(mx + 60 + Math.random()*60, groundY() - 30 - mh);
+        mt.lineTo(mx + 140 + Math.random()*60, groundY() - 30);
+        mt.closePath();
+        mt.endFill();
+        mt._baseX = mx;
+        parallax.bg.addChild(mt);
+    }
+
+    // Ground
+    const ground = new PIXI.Graphics();
+    ground.beginFill(theme.ground);
+    ground.drawRect(0, groundY() - 10, W(), H() - groundY() + 10);
+    ground.endFill();
+    // Path
+    ground.beginFill(0xC8A060);
+    ground.drawRect(0, groundY() - 5, W(), 30);
+    ground.endFill();
+    parallax.fg.addChild(ground);
+
+    // Cacti (midground decorations)
+    for (let i = 0; i < 12; i++) {
+        const c = drawCactus();
+        c.x = i * W() * 0.15 + Math.random()*80;
+        c.y = groundY() - 15;
+        c._baseX = c.x;
+        c.scale.set(0.5 + Math.random()*0.4);
+        parallax.mid.addChild(c);
+    }
+}
+
+function drawCactus() {
+    const g = new PIXI.Graphics();
+    g.beginFill(0x2E7D32);
+    g.drawRoundedRect(-6, -50, 12, 50, 4);
+    // Arms
+    g.drawRoundedRect(-22, -38, 16, 8, 3);
+    g.drawRoundedRect(-22, -38, 8, 20, 3);
+    g.drawRoundedRect(6, -28, 16, 8, 3);
+    g.drawRoundedRect(14, -28, 8, 16, 3);
+    g.endFill();
+    return g;
+}
+
+// ========== COYOTE ==========
+function createCoyote() {
+    const c = new PIXI.Container();
+    c._legPhase = 0;
+    c._bobPhase = 0;
+    c._tailPhase = 0;
+    c._blinkTimer = 0;
+    c._blinking = false;
+    c._howling = false;
+    c._howlTimer = 0;
+
+    // Build parts
+    c._body = new PIXI.Graphics();
+    c._head = new PIXI.Graphics();
+    c._tail = new PIXI.Graphics();
+    c._legs = [new PIXI.Graphics(), new PIXI.Graphics(), new PIXI.Graphics(), new PIXI.Graphics()];
+    c._eyeL = new PIXI.Graphics();
+    c._eyeR = new PIXI.Graphics();
+
+    // Add in order: tail, legs, body, head, eyes
+    c.addChild(c._tail);
+    c._legs.forEach(l => c.addChild(l));
+    c.addChild(c._body);
+    c.addChild(c._head);
+    c.addChild(c._eyeL);
+    c.addChild(c._eyeR);
+
+    drawCoyoteParts(c);
+    return c;
+}
+
+function drawCoyoteParts(c) {
+    const s = 1;
+    // Body
+    const body = c._body;
+    body.clear();
+    body.beginFill(0xC4A46E);
+    body.drawEllipse(0, 0, 40*s, 18*s);
+    body.endFill();
+    body.beginFill(0xDEC9A0);
+    body.drawEllipse(2, 5, 30*s, 10*s);
+    body.endFill();
+
+    // Head
+    const head = c._head;
+    head.clear();
+    head.beginFill(0xC4A46E);
+    head.drawCircle(0, 0, 15*s);
+    head.endFill();
+    // Snout
+    head.beginFill(0xBB9960);
+    head.moveTo(12, -3);
+    head.lineTo(26, 2);
+    head.lineTo(12, 6);
+    head.closePath();
+    head.endFill();
+    // Nose
+    head.beginFill(0x222222);
+    head.drawCircle(25, 2, 3);
+    head.endFill();
+    // Ears
+    head.beginFill(0xA88B55);
+    head.moveTo(-4, -14);
+    head.lineTo(-10, -30);
+    head.lineTo(4, -16);
+    head.closePath();
+    head.endFill();
+    head.beginFill(0xA88B55);
+    head.moveTo(4, -14);
+    head.lineTo(0, -28);
+    head.lineTo(12, -14);
+    head.closePath();
+    head.endFill();
+    // Inner ears
+    head.beginFill(0xD4A76A);
+    head.moveTo(-3, -16);
+    head.lineTo(-7, -26);
+    head.lineTo(2, -17);
+    head.closePath();
+    head.endFill();
+    head.beginFill(0xD4A76A);
+    head.moveTo(5, -15);
+    head.lineTo(2, -25);
+    head.lineTo(10, -15);
+    head.closePath();
+    head.endFill();
+    head.x = 38;
+    head.y = -8;
+}
+
+function updateCoyoteAnimation(dt) {
+    if (!coyote) return;
+    animTime += dt;
+    const c = coyote;
+
+    // Walking
+    if (walking) {
+        c._legPhase += dt * 8;
+        c._bobPhase += dt * 6;
+        c._tailPhase += dt * 3;
+
+        if (Math.floor(c._legPhase) % 6 === 0 && Math.random() < 0.1) playFootstep();
+    } else {
+        // Idle breathing
+        c._bobPhase += dt * 1.5;
+        c._tailPhase += dt * 1.5;
+    }
+
+    // Body bob
+    c._body.y = Math.sin(c._bobPhase) * (walking ? 2.5 : 1);
+    c._head.y = -8 + Math.sin(c._bobPhase) * (walking ? 2 : 0.5);
+
+    // Legs
+    const legPositions = [
+        { x: -20, phase: 0 }, { x: -10, phase: Math.PI },
+        { x: 10, phase: Math.PI * 0.5 }, { x: 20, phase: Math.PI * 1.5 }
+    ];
+    c._legs.forEach((leg, i) => {
+        leg.clear();
+        leg.beginFill(0xA88B55);
+        const lp = legPositions[i];
+        const swing = walking ? Math.sin(c._legPhase + lp.phase) * 8 : 0;
+        leg.drawRoundedRect(lp.x - 3 + swing, 12, 7, 18, 2);
+        // Paw
+        leg.beginFill(0x8B7040);
+        leg.drawEllipse(lp.x + swing, 30, 5, 3);
+        leg.endFill();
+    });
+
+    // Tail
+    c._tail.clear();
+    const tailSwing = Math.sin(c._tailPhase) * 12;
+    c._tail.beginFill(0xB89860);
+    c._tail.drawEllipse(-35, -8 + tailSwing * 0.3, 18, 8);
+    c._tail.endFill();
+    c._tail.beginFill(0xF5F5DC);
+    c._tail.drawEllipse(-40, -5 + tailSwing * 0.3, 8, 5);
+    c._tail.endFill();
+
+    // Eyes & blink
+    c._blinkTimer -= dt;
+    if (c._blinkTimer <= 0) {
+        c._blinking = !c._blinking;
+        c._blinkTimer = c._blinking ? 0.15 : 2 + Math.random() * 3;
+    }
+
+    c._eyeL.clear();
+    c._eyeR.clear();
+    const eyeBaseX = 38;
+    const eyeBaseY = c._head.y + 1;
+    if (c._blinking) {
+        c._eyeL.beginFill(0x222222);
+        c._eyeL.drawRect(eyeBaseX + 4, eyeBaseY - 4, 7, 2);
+        c._eyeR.beginFill(0x222222);
+        c._eyeR.drawRect(eyeBaseX + 12, eyeBaseY - 3, 7, 2);
+    } else {
+        // White
+        c._eyeL.beginFill(0xFFFFFF);
+        c._eyeL.drawCircle(eyeBaseX + 7, eyeBaseY - 3, 5);
+        c._eyeL.endFill();
+        c._eyeR.beginFill(0xFFFFFF);
+        c._eyeR.drawCircle(eyeBaseX + 15, eyeBaseY - 2, 4);
+        c._eyeR.endFill();
+        // Pupils
+        c._eyeL.beginFill(0x111111);
+        c._eyeL.drawCircle(eyeBaseX + 9, eyeBaseY - 3, 2.5);
+        c._eyeL.endFill();
+        c._eyeR.beginFill(0x111111);
+        c._eyeR.drawCircle(eyeBaseX + 17, eyeBaseY - 2, 2);
+        c._eyeR.endFill();
+    }
+
+    // Howl
+    if (c._howling) {
+        c._head.rotation = -0.5;
+        // Open mouth
+        c._head.beginFill(0x333333);
+        c._head.drawEllipse(20, -3, 6, 5);
+        c._head.endFill();
+    } else {
+        c._head.rotation = 0;
+    }
+}
+
+// ========== COMPANIONS ==========
+function createCompanion(index) {
+    const c = new PIXI.Container();
+    const g = new PIXI.Graphics();
+    c.addChild(g);
+    c._phase = Math.random() * Math.PI * 2;
+    c._type = index;
+
+    const colors = [
+        0x5C4033, // Roadrunner
+        0xC4A46E, // Jackrabbit
+        0x808080, // Armadillo
+        0x556B2F, // Tortoise
+        0x8B4513, // Hawk
+        0xCC5500, // Fox
+        0x6B4226, // Owl
+        0xC8A060, // Rattlesnake
+        0x4A0000, // Scorpion
+        0x3A2A1A  // Eagle
+    ];
+
+    const col = colors[index % colors.length];
+
+    switch(index) {
+        case 0: // Roadrunner
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 14, 8);
+            g.endFill();
+            g.beginFill(0x333);
+            g.drawCircle(12, -5, 5);
+            g.endFill();
+            // Beak
+            g.beginFill(0xFFAA00);
+            g.moveTo(16, -5);
+            g.lineTo(24, -4);
+            g.lineTo(16, -3);
+            g.closePath();
+            g.endFill();
+            // Tail feathers
+            g.lineStyle(2, col);
+            g.moveTo(-14, 0);
+            g.lineTo(-24, -5);
+            g.moveTo(-14, 0);
+            g.lineTo(-24, 0);
+            g.lineStyle(0);
+            // Legs
+            g.beginFill(0xFFAA00);
+            g.drawRect(-2, 6, 2, 10);
+            g.drawRect(4, 6, 2, 10);
+            g.endFill();
+            break;
+        case 1: // Jackrabbit
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 12, 10);
+            g.endFill();
+            g.beginFill(col);
+            g.drawCircle(10, -6, 7);
+            g.endFill();
+            // Ears
+            g.beginFill(0xDEB887);
+            g.drawEllipse(6, -22, 3, 10);
+            g.drawEllipse(14, -20, 3, 10);
+            g.endFill();
+            g.beginFill(0xFFCCCC);
+            g.drawEllipse(6, -22, 1.5, 7);
+            g.drawEllipse(14, -20, 1.5, 7);
+            g.endFill();
+            // Eye
+            g.beginFill(0x111);
+            g.drawCircle(14, -6, 2);
+            g.endFill();
+            break;
+        case 2: // Armadillo
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 16, 10);
+            g.endFill();
+            // Shell bands
+            for (let i = -2; i <= 2; i++) {
+                g.lineStyle(1, 0x999);
+                g.moveTo(i * 5, -10);
+                g.lineTo(i * 5, 10);
+            }
+            g.lineStyle(0);
+            g.beginFill(0x666);
+            g.drawCircle(14, -2, 5);
+            g.endFill();
+            g.beginFill(0x111);
+            g.drawCircle(17, -3, 1.5);
+            g.endFill();
+            break;
+        case 3: // Tortoise
+            g.beginFill(0x556B2F);
+            g.drawEllipse(0, 2, 16, 10);
+            g.endFill();
+            g.beginFill(0x3B5323);
+            g.drawEllipse(0, -2, 14, 8);
+            g.endFill();
+            // Head
+            g.beginFill(0x6B8E23);
+            g.drawCircle(14, 2, 5);
+            g.endFill();
+            g.beginFill(0x111);
+            g.drawCircle(17, 1, 1.5);
+            g.endFill();
+            // Legs
+            g.beginFill(0x6B8E23);
+            g.drawEllipse(-10, 10, 4, 3);
+            g.drawEllipse(10, 10, 4, 3);
+            g.endFill();
+            break;
+        case 4: // Hawk
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 12, 7);
+            g.endFill();
+            g.beginFill(0x5C3317);
+            g.drawCircle(10, -4, 5);
+            g.endFill();
+            // Beak
+            g.beginFill(0xFFAA00);
+            g.moveTo(14, -4);
+            g.lineTo(20, -2);
+            g.lineTo(14, -1);
+            g.closePath();
+            g.endFill();
+            // Wings
+            g.beginFill(0x6B4226);
+            g.moveTo(-5, -3);
+            g.lineTo(-18, -15);
+            g.lineTo(-2, -1);
+            g.closePath();
+            g.endFill();
+            break;
+        case 5: // Fox
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 14, 9);
+            g.endFill();
+            g.beginFill(0xDD6600);
+            g.drawCircle(12, -5, 6);
+            g.endFill();
+            // Ears
+            g.beginFill(0xDD6600);
+            g.moveTo(8, -10);
+            g.lineTo(5, -20);
+            g.lineTo(12, -12);
+            g.closePath();
+            g.moveTo(14, -10);
+            g.lineTo(16, -19);
+            g.lineTo(19, -10);
+            g.closePath();
+            g.endFill();
+            // Nose
+            g.beginFill(0x111);
+            g.drawCircle(17, -4, 2);
+            g.endFill();
+            // Tail
+            g.beginFill(col);
+            g.drawEllipse(-16, -3, 10, 5);
+            g.endFill();
+            g.beginFill(0xFFFFFF);
+            g.drawEllipse(-20, -3, 4, 3);
+            g.endFill();
+            break;
+        case 6: // Owl
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 10, 12);
+            g.endFill();
+            // Eyes (big circles)
+            g.beginFill(0xFFDD00);
+            g.drawCircle(-4, -5, 5);
+            g.drawCircle(4, -5, 5);
+            g.endFill();
+            g.beginFill(0x111);
+            g.drawCircle(-4, -5, 2.5);
+            g.drawCircle(4, -5, 2.5);
+            g.endFill();
+            // Beak
+            g.beginFill(0xFF8C00);
+            g.moveTo(-2, -1);
+            g.lineTo(0, 4);
+            g.lineTo(2, -1);
+            g.closePath();
+            g.endFill();
+            // Ear tufts
+            g.beginFill(col);
+            g.moveTo(-6, -12);
+            g.lineTo(-10, -22);
+            g.lineTo(-2, -13);
+            g.closePath();
+            g.moveTo(6, -12);
+            g.lineTo(10, -22);
+            g.lineTo(2, -13);
+            g.closePath();
+            g.endFill();
+            break;
+        case 7: // Rattlesnake
+            g.beginFill(col);
+            for (let i = 0; i < 6; i++) {
+                g.drawCircle(-15 + i * 6, Math.sin(i) * 3, 4);
+            }
+            g.endFill();
+            // Head
+            g.beginFill(0xA08040);
+            g.drawEllipse(20, 0, 6, 4);
+            g.endFill();
+            g.beginFill(0x111);
+            g.drawCircle(23, -1, 1.5);
+            g.endFill();
+            // Rattle
+            g.beginFill(0x888);
+            g.drawCircle(-20, 0, 3);
+            g.drawCircle(-23, 0, 2);
+            g.endFill();
+            break;
+        case 8: // Scorpion
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 10, 6);
+            g.endFill();
+            // Tail
+            g.lineStyle(2.5, col);
+            g.moveTo(-10, 0);
+            g.lineTo(-15, -5);
+            g.lineTo(-18, -15);
+            g.lineTo(-14, -20);
+            g.lineStyle(0);
+            g.beginFill(0xFF0000);
+            g.drawCircle(-14, -21, 2);
+            g.endFill();
+            // Claws
+            g.beginFill(col);
+            g.drawEllipse(12, -4, 5, 3);
+            g.drawEllipse(12, 4, 5, 3);
+            g.endFill();
+            break;
+        case 9: // Eagle
+            g.beginFill(col);
+            g.drawEllipse(0, 0, 16, 9);
+            g.endFill();
+            // White head
+            g.beginFill(0xFFF8DC);
+            g.drawCircle(14, -5, 7);
+            g.endFill();
+            // Beak
+            g.beginFill(0xFFAA00);
+            g.moveTo(19, -4);
+            g.lineTo(26, -2);
+            g.lineTo(19, 0);
+            g.closePath();
+            g.endFill();
+            g.beginFill(0x111);
+            g.drawCircle(17, -6, 2);
+            g.endFill();
+            // Wings
+            g.beginFill(0x2A1A0A);
+            g.moveTo(-5, -4);
+            g.lineTo(-22, -20);
+            g.lineTo(0, -3);
+            g.closePath();
+            g.endFill();
+            break;
+    }
+
+    c.scale.set(0.7);
+    return c;
+}
+
+function addCompanionToParty() {
+    if (companionCount > 10) return;
+    const idx = companionCount - 1;
+    if (idx < 0 || idx >= COMPANION_NAMES.length) return;
+    const comp = createCompanion(idx);
+    comp.y = groundY() - 5;
+    companionSprites.push(comp);
+    app.stage.addChild(comp);
+    companionsEarned.push(COMPANION_NAMES[idx]);
+    playFanfare();
+    showFeedback(COMPANION_NAMES[idx] + ' joined your party!', '#FFD700');
+}
+
+// ========== ENCOUNTERS (PixiJS) ==========
+function createEncounterVisual(type) {
+    encounterContainer.removeChildren();
+    const g = new PIXI.Graphics();
+
+    const ex = coyoteScreenX + 180;
+    const ey = groundY();
+
+    switch(type) {
+        case 'gate':
+            // Wooden gate
+            g.beginFill(0x8B4513);
+            g.drawRect(ex - 5, ey - 80, 10, 80);
+            g.drawRect(ex + 55, ey - 80, 10, 80);
+            g.endFill();
+            // Crossbar
+            g.beginFill(0xA0522D);
+            g.drawRect(ex - 5, ey - 70, 70, 8);
+            g.drawRect(ex - 5, ey - 40, 70, 8);
+            g.endFill();
+            // Planks
+            g.beginFill(0x9B6335);
+            for (let i = 0; i < 5; i++) {
+                g.drawRect(ex + 5 + i * 10, ey - 68, 8, 56);
+            }
+            g.endFill();
+            break;
+        case 'bridge':
+            // Gap in ground
+            g.beginFill(0x1A0A00);
+            g.drawRect(ex, ey - 5, 80, 35);
+            g.endFill();
+            // Rope sides
+            g.lineStyle(3, 0x8B6914);
+            g.moveTo(ex, ey - 20);
+            g.lineTo(ex + 80, ey - 20);
+            g.moveTo(ex, ey + 10);
+            g.lineTo(ex + 80, ey + 10);
+            g.lineStyle(0);
+            break;
+        case 'campfire':
+            // Fire
+            g.beginFill(0xFF6600, 0.8);
+            g.moveTo(ex + 30, ey - 5);
+            g.lineTo(ex + 20, ey - 30);
+            g.lineTo(ex + 40, ey - 30);
+            g.closePath();
+            g.endFill();
+            g.beginFill(0xFFCC00, 0.8);
+            g.moveTo(ex + 30, ey - 5);
+            g.lineTo(ex + 24, ey - 22);
+            g.lineTo(ex + 36, ey - 22);
+            g.closePath();
+            g.endFill();
+            // Logs
+            g.beginFill(0x5C3317);
+            g.drawEllipse(ex + 30, ey, 18, 5);
+            g.endFill();
+            g.beginFill(0x4A2511);
+            g.drawEllipse(ex + 30, ey + 4, 14, 4);
+            g.endFill();
+            // Sparks
+            g.beginFill(0xFFFF00, 0.5);
+            for (let i = 0; i < 5; i++) {
+                g.drawCircle(ex + 25 + Math.random()*10, ey - 30 - Math.random()*15, 1.5);
+            }
+            g.endFill();
+            break;
+        case 'sand':
+            // Sand mound with "writing"
+            g.beginFill(0xDEB887, 0.6);
+            g.drawEllipse(ex + 40, ey - 3, 50, 8);
+            g.endFill();
+            // scratches to suggest writing
+            g.lineStyle(1.5, 0xA0845A, 0.7);
+            for (let i = 0; i < 4; i++) {
+                g.moveTo(ex + 15 + i * 16, ey - 6);
+                g.lineTo(ex + 20 + i * 16, ey);
+            }
+            g.lineStyle(0);
+            break;
+    }
+
+    encounterContainer.addChild(g);
+    encounterContainer._visual = g;
+    return g;
+}
+
+function clearEncounterVisual() {
+    encounterContainer.removeChildren();
+}
+
+// ========== WORD SELECTION ==========
+function pickWord() {
+    const wordList = WORDS[grade];
+    // Weighted by mastery - wrong words appear 3x more
+    const weighted = [];
+    wordList.forEach(w => {
+        const m = mastery[w] || { correct: 0, wrong: 0, level: 0 };
+        if (m.level >= 2) {
+            weighted.push(w); // mastered = 1x weight
+        } else if (m.wrong > 0) {
+            weighted.push(w, w, w); // wrong = 3x weight
+        } else {
+            weighted.push(w, w); // default = 2x weight
+        }
+    });
+    // Avoid repeating the same word
+    let word;
+    let attempts = 0;
+    do {
+        word = weighted[Math.floor(Math.random() * weighted.length)];
+        attempts++;
+    } while (word === currentWord && attempts < 20);
+    return word;
+}
+
+// ========== UI ==========
+function updateHUD() {
+    document.getElementById('hud-score').textContent = 'Score: ' + score;
+    document.getElementById('hud-streak').textContent = 'Streak: ' + streak;
+    document.getElementById('hud-companions').textContent = 'Party: ' + (1 + companionCount);
+}
+
+function showFeedback(text, color) {
+    const fb = document.getElementById('feedback');
+    fb.textContent = text;
+    fb.style.color = color || '#fff';
+    fb.style.display = 'block';
+    setTimeout(() => { fb.style.display = 'none'; }, 2000);
+}
+
+function setupAnswerSlots(word) {
+    const row = document.getElementById('answer-row');
+    row.innerHTML = '';
+    for (let i = 0; i < word.length; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'answer-slot';
+        slot.dataset.index = i;
+        row.appendChild(slot);
+    }
+}
+
+function setupTiles(word) {
+    const area = document.getElementById('tile-area');
+    area.innerHTML = '';
+    // Scramble letters
+    const letters = word.split('');
+    // Add a couple extra random letters for harder words
+    if (word.length > 4) {
+        const extras = 'abcdefghijklmnopqrstuvwxyz';
+        for (let i = 0; i < 2; i++) {
+            letters.push(extras[Math.floor(Math.random() * 26)]);
+        }
+    }
+    // Shuffle
+    for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    letters.forEach((ch, i) => {
+        const tile = document.createElement('button');
+        tile.className = 'letter-tile';
+        tile.textContent = ch.toUpperCase();
+        tile.dataset.letter = ch;
+        tile.dataset.index = i;
+        tile.addEventListener('click', () => onTileClick(tile));
+        area.appendChild(tile);
+    });
+}
+
+function onTileClick(tile) {
+    if (tile.classList.contains('used') || correctLock) return;
+    playTileClick();
+    tile.classList.add('used');
+    inputLetters.push(tile.dataset.letter);
+    updateAnswerSlots();
+    checkAnswer();
+}
+
+function updateAnswerSlots() {
+    const slots = document.querySelectorAll('.answer-slot');
+    slots.forEach((slot, i) => {
+        if (i < inputLetters.length) {
+            slot.textContent = inputLetters[i].toUpperCase();
+            slot.classList.add('filled');
+        } else {
+            slot.textContent = '';
+            slot.classList.remove('filled');
+        }
+    });
+}
+
+function checkAnswer() {
+    if (inputLetters.length < currentWord.length) return;
+
+    const attempt = inputLetters.join('').toLowerCase();
+    if (attempt === currentWord) {
+        onCorrectAnswer();
+    } else {
+        onWrongAnswer();
+    }
+}
+
+// ========== INPUT HANDLING ==========
+let typingHandler = null;
+
+function attachTypingInput() {
+    const input = document.getElementById('typing-input');
+    input.value = '';
+    input.style.opacity = '1';
+    input.style.pointerEvents = 'auto';
+    input.focus();
+
+    typingHandler = (e) => {
+        if (correctLock) return;
+        const val = input.value.toLowerCase().replace(/[^a-z]/g, '');
+        input.value = val;
+        // Update answer slots from typing
+        inputLetters = val.split('');
+        updateAnswerSlots();
+        // Also mark tiles as used
+        markTilesFromInput(val);
+
+        if (val.length >= currentWord.length) {
+            if (val === currentWord) {
+                onCorrectAnswer();
+            } else if (val.length > currentWord.length) {
+                // Too many letters, wrong
+                onWrongAnswer();
+            } else {
+                onWrongAnswer();
+            }
+        }
+    };
+    input.addEventListener('input', typingHandler);
+}
+
+function detachTypingInput() {
+    const input = document.getElementById('typing-input');
+    if (typingHandler) input.removeEventListener('input', typingHandler);
+    typingHandler = null;
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    input.value = '';
+}
+
+function markTilesFromInput(val) {
+    const tiles = document.querySelectorAll('.letter-tile');
+    // Reset all
+    tiles.forEach(t => t.classList.remove('used'));
+    // Mark used for each letter typed
+    const remaining = val.split('');
+    tiles.forEach(t => {
+        const idx = remaining.indexOf(t.dataset.letter);
+        if (idx !== -1) {
+            t.classList.add('used');
+            remaining.splice(idx, 1);
+        }
+    });
+}
+
+// ========== CORRECT/WRONG ==========
+function onCorrectAnswer() {
+    if (correctLock) return;
+    correctLock = true;
+    detachTypingInput();
+    const myGen = encounterGen;
+
+    // Mark slots correct
+    document.querySelectorAll('.answer-slot').forEach(s => s.classList.add('correct'));
+
+    score += 10 + streak * 2;
+    streak++;
+    totalCorrect++;
+
+    // Mastery
+    if (!mastery[currentWord]) mastery[currentWord] = { correct: 0, wrong: 0, level: 0 };
+    mastery[currentWord].correct++;
+    if (mastery[currentWord].correct >= 2) mastery[currentWord].level = 2;
+
+    // Companion check
+    if (totalCorrect % 5 === 0 && companionCount < COMPANION_NAMES.length) {
+        companionCount++;
+        setTimeout(() => addCompanionToParty(), 800);
+    }
+
+    updateHUD();
+    saveData();
+
+    playCorrect();
+    showFeedback('Correct!', '#4CAF50');
+
+    // Howl animation
+    coyote._howling = true;
+    playHowl();
+
+    // Resume after howl
+    setTimeout(() => {
+        if (encounterGen !== myGen) return;
+        coyote._howling = false;
+        drawCoyoteParts(coyote);
+        clearEncounterVisual();
+        hideEncounterUI();
+        inEncounter = false;
+        correctLock = false;
+        walking = true;
+        if (correctFallbackTimer) { clearTimeout(correctFallbackTimer); correctFallbackTimer = null; }
+        // Check theme change
+        if (totalCorrect % 10 === 0) {
+            buildEnvironment();
+            showFeedback(getTheme().name + '!', '#FFD700');
+        }
+    }, 1500);
+
+    // Hard fallback
+    correctFallbackTimer = setTimeout(() => {
+        correctFallbackTimer = null;
+        if (encounterGen !== myGen) return;
+        if (!walking && correctLock) {
+            coyote._howling = false;
+            drawCoyoteParts(coyote);
+            clearEncounterVisual();
+            hideEncounterUI();
+            inEncounter = false;
+            correctLock = false;
+            walking = true;
+        }
+    }, 2000);
+}
+
+function onWrongAnswer() {
+    if (correctLock) return;
+    correctLock = true;
+    detachTypingInput();
+    const myGen = encounterGen;
+
+    streak = 0;
+
+    // Mastery
+    if (!mastery[currentWord]) mastery[currentWord] = { correct: 0, wrong: 0, level: 0 };
+    mastery[currentWord].wrong++;
+
+    updateHUD();
+    playWrong();
+    showFeedback('Not quite...', '#f44336');
+
+    // Mark slots wrong
+    document.querySelectorAll('.answer-slot').forEach(s => s.classList.add('wrong'));
+
+    // Reveal correct spelling letter by letter
+    const slots = document.querySelectorAll('.answer-slot');
+    const letters = currentWord.split('');
+    let revealIndex = 0;
+
+    if (wrongRevealInterval) clearInterval(wrongRevealInterval);
+    wrongRevealInterval = setInterval(() => {
+        if (encounterGen !== myGen) { clearInterval(wrongRevealInterval); wrongRevealInterval = null; return; }
+        if (revealIndex < letters.length) {
+            slots[revealIndex].textContent = letters[revealIndex].toUpperCase();
+            slots[revealIndex].classList.remove('wrong');
+            slots[revealIndex].classList.add('correct');
+            slots[revealIndex].classList.add('filled');
+            revealIndex++;
+        } else {
+            clearInterval(wrongRevealInterval);
+            wrongRevealInterval = null;
+            // Wait then proceed
+            setTimeout(() => {
+                if (encounterGen !== myGen) return;
+                clearEncounterVisual();
+                hideEncounterUI();
+                inEncounter = false;
+                correctLock = false;
+                walking = true;
+                if (wrongFallbackTimer) { clearTimeout(wrongFallbackTimer); wrongFallbackTimer = null; }
+            }, 1500);
+        }
+    }, 300);
+
+    // Hard fallback - 8 second max
+    if (wrongFallbackTimer) clearTimeout(wrongFallbackTimer);
+    wrongFallbackTimer = setTimeout(() => {
+        wrongFallbackTimer = null;
+        if (encounterGen !== myGen) return;
+        if (wrongRevealInterval) { clearInterval(wrongRevealInterval); wrongRevealInterval = null; }
+        if (!walking) {
+            clearEncounterVisual();
+            hideEncounterUI();
+            inEncounter = false;
+            correctLock = false;
+            walking = true;
+        }
+    }, 8000);
+}
+
+// ========== ENCOUNTER FLOW ==========
+function showEncounterUI() {
+    document.getElementById('answer-row').style.display = 'flex';
+    document.getElementById('tile-area').style.display = 'flex';
+
+}
+
+function hideEncounterUI() {
+    document.getElementById('word-display').style.display = 'none';
+    document.getElementById('word-picture').style.display = 'none';
+    document.getElementById('answer-row').style.display = 'none';
+    document.getElementById('tile-area').style.display = 'flex';
+    document.getElementById('tile-area').innerHTML = '';
+    document.getElementById('answer-row').innerHTML = '';
+
+}
+
+let encounterDistance = 300 + Math.random() * 200;
+let distanceSinceEncounter = 0;
+
+function triggerEncounter() {
+    encounterGen++;
+    // Clear any stale timers from previous encounters
+    if (wrongFallbackTimer) { clearTimeout(wrongFallbackTimer); wrongFallbackTimer = null; }
+    if (wrongRevealInterval) { clearInterval(wrongRevealInterval); wrongRevealInterval = null; }
+    if (correctFallbackTimer) { clearTimeout(correctFallbackTimer); correctFallbackTimer = null; }
+    inEncounter = true;
+    walking = false;
+    correctLock = false;
+    inputLetters = [];
+
+    currentWord = pickWord();
+    currentEncounter = ENCOUNTER_TYPES[Math.floor(Math.random() * ENCOUNTER_TYPES.length)];
+
+    createEncounterVisual(currentEncounter);
+
+    // Speak word
+    speakWord(currentWord);
+
+    // Show picture cue
+    const pic = document.getElementById('word-picture');
+    const emoji = WORD_PICTURES[currentWord];
+    if (emoji) {
+        pic.textContent = emoji;
+        pic.style.display = 'block';
+    } else {
+        pic.style.display = 'none';
+    }
+
+    // Flash word for 2 seconds
+    const wd = document.getElementById('word-display');
+    wd.textContent = currentWord.toUpperCase();
+    wd.style.display = 'block';
+
+    setTimeout(() => {
+        wd.style.display = 'none';
+        // Show UI
+        setupAnswerSlots(currentWord);
+        setupTiles(currentWord);
+        showEncounterUI();
+        attachTypingInput();
+    }, 2000);
+
+    encounterDistance = 300 + Math.random() * 300;
+    distanceSinceEncounter = 0;
+}
+
+// Speaker button
+document.getElementById('word-picture').addEventListener('click', () => {
+    if (inEncounter && currentWord) speakWord(currentWord);
+});
+
+// ========== PARALLAX SCROLLING ==========
+function updateParallax(dx) {
+    worldOffset += dx;
+
+    // Move midground objects (cacti)
+    parallax.mid.children.forEach(c => {
+        if (c._baseX !== undefined) {
+            c.x = c._baseX - worldOffset * 0.5;
+            // Wrap around
+            if (c.x < -60) c._baseX += W() * 2;
+            if (c.x > W() + 60) c._baseX -= W() * 2;
+        }
+    });
+
+    // Move background mountains slower
+    parallax.bg.children.forEach(c => {
+        if (c._baseX !== undefined) {
+            c.x = c._baseX - worldOffset * 0.15;
+            if (c.x < -200) c._baseX += W() * 2;
+            if (c.x > W() + 200) c._baseX -= W() * 2;
+        }
+    });
+
+    // Move encounter objects
+    encounterContainer.children.forEach(c => {
+        c.x = -worldOffset;
+    });
+}
+
+// ========== GAME LOOP ==========
+function gameLoop(delta) {
+    const dt = delta / 60;
+
+    updateCoyoteAnimation(dt);
+
+    // Update companion positions
+    companionSprites.forEach((comp, i) => {
+        const targetX = coyoteScreenX - (i + 1) * 50;
+        comp.x += (targetX - comp.x) * 0.05;
+        comp.y = groundY() - 5 + Math.sin(animTime * 2 + i) * 2;
+        comp._phase += dt * 2;
+    });
+
+    if (walking) {
+        const speed = 1.5;
+        updateParallax(speed);
+        distanceSinceEncounter += speed;
+
+        // Check for encounter
+        if (distanceSinceEncounter >= encounterDistance) {
+            triggerEncounter();
+        }
+    }
+
+    // Campfire flicker
+    if (currentEncounter === 'campfire' && inEncounter) {
+        encounterContainer.children.forEach(c => {
+            c.alpha = 0.9 + Math.sin(animTime * 10) * 0.1;
+        });
+    }
+}
+
+// ========== START SCREEN ==========
+function startGame() {
+    playerName = document.getElementById('player-name').value.trim() || 'Trailblazer';
+    grade = parseInt(document.getElementById('grade-select').value);
+
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('hud').style.display = 'flex';
+
+    // Rebuild companions from save
+    for (let i = 0; i < companionCount; i++) {
+        const comp = createCompanion(i);
+        comp.y = groundY() - 5;
+        comp.x = coyoteScreenX - (i + 1) * 50;
+        companionSprites.push(comp);
+        app.stage.addChild(comp);
+    }
+
+    updateHUD();
+    saveData();
+    walking = true;
+    getAudio(); // Init audio context on user gesture
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('player-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startGame();
+});
+
+// ========== INIT ==========
+loadData();
+initPixi();
+</script>
+</body>
+</html>

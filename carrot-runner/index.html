@@ -1,0 +1,2805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrot Runner 🥕</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+#gameCanvas { display: block; width: 100vw; height: 100vh; }
+
+/* Start Screen */
+#startScreen {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #2d5016 0%, #4a8c1c 30%, #6db33f 60%, #87ceeb 100%);
+  overflow-y: auto;
+}
+#startScreen h1 {
+  font-size: clamp(3rem, 8vw, 6rem); color: #fff; text-shadow: 4px 4px 0 #e8760a, 6px 6px 0 rgba(0,0,0,0.3);
+  margin-bottom: 0.5rem; letter-spacing: 2px;
+}
+#startScreen .subtitle {
+  font-size: clamp(1rem, 3vw, 1.5rem); color: #ffe4b5; margin-bottom: 1rem; text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+.menu-box {
+  background: rgba(255,255,255,0.95); border-radius: 20px; padding: 1.5rem 2rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 520px; width: 90%;
+}
+.menu-box h2 { font-size: 1.3rem; color: #333; margin-bottom: 0.8rem; text-align: center; }
+.option-group { margin-bottom: 1rem; }
+.option-group label { display: block; font-weight: bold; color: #555; margin-bottom: 0.4rem; font-size: 1rem; }
+.btn-row { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
+.opt-btn {
+  padding: 0.6rem 1rem; border: 3px solid #ddd; border-radius: 12px; background: #f9f9f9;
+  font-size: 1rem; cursor: pointer; transition: all 0.2s; font-weight: bold; min-width: 55px; text-align: center;
+}
+.opt-btn:hover { border-color: #e8760a; background: #fff3e0; }
+.opt-btn.selected { border-color: #e8760a; background: #e8760a; color: #fff; }
+#startBtn {
+  display: block; width: 100%; padding: 0.9rem; margin-top: 0.5rem;
+  font-size: 1.3rem; font-weight: bold; color: #fff;
+  background: linear-gradient(135deg, #e8760a, #f5a623); border: none; border-radius: 14px;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 15px rgba(232,118,10,0.4);
+}
+#startBtn:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(232,118,10,0.5); }
+.menu-nav { display: flex; gap: 0.5rem; margin-top: 0.8rem; justify-content: center; flex-wrap: wrap; }
+.menu-nav button {
+  padding: 0.5rem 1rem; border: 2px solid #ccc; border-radius: 10px; background: #fff;
+  font-size: 0.9rem; cursor: pointer; font-weight: bold; color: #555; transition: all 0.2s;
+}
+.menu-nav button:hover { border-color: #e8760a; color: #e8760a; }
+.high-score { text-align: center; margin-top: 0.6rem; color: #888; font-size: 0.9rem; }
+
+/* Player Name */
+#playerNameArea { margin-bottom: 1rem; text-align: center; }
+#playerNameInput {
+  font-size: 1.1rem; padding: 0.5rem 1rem; border: 2px solid #ddd; border-radius: 10px;
+  text-align: center; width: 200px; outline: none;
+}
+#playerNameInput:focus { border-color: #e8760a; }
+
+/* Leaderboard */
+.leaderboard { margin-top: 0.5rem; }
+.leaderboard table { width: 100%; border-collapse: collapse; }
+.leaderboard th, .leaderboard td { padding: 0.3rem 0.5rem; text-align: left; font-size: 0.95rem; }
+.leaderboard th { color: #888; border-bottom: 2px solid #eee; }
+.leaderboard td { border-bottom: 1px solid #f0f0f0; }
+.leaderboard .rank { width: 30px; color: #e8760a; font-weight: bold; }
+
+/* Overlay panels */
+.overlay-panel {
+  position: fixed; inset: 0; z-index: 200; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.85); overflow-y: auto; padding: 2rem;
+}
+.overlay-panel.show { display: flex; }
+.panel-box {
+  background: #fff; border-radius: 20px; padding: 2rem; max-width: 600px; width: 95%;
+  max-height: 85vh; overflow-y: auto; position: relative;
+}
+.panel-box h2 { text-align: center; margin-bottom: 1rem; color: #333; }
+.panel-close {
+  position: absolute; top: 1rem; right: 1rem; background: #eee; border: none;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.panel-close:hover { background: #ddd; }
+
+/* Stats bars */
+.stat-bar-container { margin: 0.8rem 0; }
+.stat-bar-label { font-size: 0.9rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; }
+.stat-bar-bg { height: 24px; background: #eee; border-radius: 12px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 12px; transition: width 0.5s; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 0.75rem; color: #fff; font-weight: bold; }
+
+/* Skin selector */
+.skin-grid { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+.skin-card {
+  width: 100px; padding: 1rem; border: 3px solid #ddd; border-radius: 14px; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+}
+.skin-card:hover { border-color: #e8760a; }
+.skin-card.selected { border-color: #e8760a; background: #fff3e0; }
+.skin-card.locked { opacity: 0.4; cursor: not-allowed; }
+.skin-swatch { width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 0.5rem; }
+.skin-name { font-size: 0.85rem; font-weight: bold; color: #333; }
+.skin-req { font-size: 0.7rem; color: #888; }
+
+/* Garden */
+#gardenCanvas { width: 100%; height: 300px; border-radius: 12px; background: #8B4513; }
+
+/* Calendar */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border-radius: 6px; background: #f5f5f5; color: #666; }
+.cal-day.completed { background: #4caf50; color: #fff; }
+.cal-day.today { border: 2px solid #e8760a; }
+.cal-header { font-size: 0.7rem; color: #999; text-align: center; font-weight: bold; }
+
+/* HUD */
+#hud { position: fixed; top: 0; left: 0; right: 0; z-index: 50; pointer-events: none; padding: 0.8rem; }
+#scoreDisplay {
+  position: absolute; top: 0.8rem; left: 1rem;
+  background: rgba(0,0,0,0.6); color: #ffcc00; padding: 0.4rem 0.8rem; border-radius: 12px;
+  font-size: clamp(1rem, 2.5vw, 1.4rem); font-weight: bold; backdrop-filter: blur(4px);
+}
+#streakDisplay {
+  position: absolute; top: 0.8rem; right: 1rem;
+  background: rgba(0,0,0,0.6); color: #ff6b35; padding: 0.4rem 0.8rem; border-radius: 12px;
+  font-size: clamp(1rem, 2.5vw, 1.4rem); font-weight: bold; backdrop-filter: blur(4px);
+}
+#comboDisplay {
+  position: absolute; top: 0.8rem; left: 50%; transform: translateX(-50%);
+  background: rgba(255,100,0,0.8); color: #fff; padding: 0.3rem 0.8rem; border-radius: 12px;
+  font-size: clamp(0.9rem, 2vw, 1.1rem); font-weight: bold; backdrop-filter: blur(4px);
+  opacity: 0; transition: opacity 0.3s;
+}
+#comboDisplay.show { opacity: 1; }
+#envName {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 55;
+  font-size: clamp(2rem, 5vw, 3.5rem); color: #fff; font-weight: bold;
+  text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+  opacity: 0; transition: opacity 0.8s; pointer-events: none;
+}
+#envName.show { opacity: 1; }
+#menuBtn {
+  position: fixed; top: 0.8rem; left: 50%; transform: translateX(80px); z-index: 55;
+  background: rgba(0,0,0,0.5); border: none; color: #fff; padding: 0.3rem 0.6rem;
+  border-radius: 8px; font-size: 0.8rem; cursor: pointer; pointer-events: auto;
+}
+
+/* Question Area */
+#questionArea {
+  position: fixed; top: 4.5rem; left: 50%; transform: translateX(-50%); z-index: 50;
+  text-align: center; width: 92%; max-width: 620px;
+}
+#questionText {
+  font-size: clamp(1.6rem, 4.5vw, 2.6rem); color: #fff; font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.5); padding: 0.6rem 1.2rem; border-radius: 16px;
+  backdrop-filter: blur(6px); margin-bottom: 0.4rem;
+}
+#questionText.boss { background: rgba(180,0,0,0.7); box-shadow: 0 0 30px rgba(255,0,0,0.4); }
+@keyframes shake { 0%,100% { transform: translateX(0); } 15% { transform: translateX(-6px); } 30% { transform: translateX(6px); } 45% { transform: translateX(-4px); } 60% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 90% { transform: translateX(2px); } }
+#questionText.shake { animation: shake 0.4s ease-in-out; }
+#questionText.speed-zone { background: rgba(0,100,200,0.7); box-shadow: 0 0 30px rgba(0,150,255,0.4); }
+#hintText {
+  font-size: clamp(0.85rem, 2.2vw, 1rem); color: #ffe4b5;
+  background: rgba(0,0,0,0.35); padding: 0.3rem 0.8rem; border-radius: 10px;
+  backdrop-filter: blur(4px); margin-bottom: 0.6rem;
+}
+#answerInput {
+  font-size: clamp(1.4rem, 3.5vw, 1.8rem); padding: 0.5rem 1rem; width: 160px;
+  border: 3px solid #e8760a; border-radius: 14px; text-align: center;
+  background: rgba(255,255,255,0.95); outline: none; font-weight: bold;
+  pointer-events: auto;
+}
+#answerInput:focus { border-color: #f5a623; box-shadow: 0 0 15px rgba(245,166,35,0.4); }
+#feedback {
+  font-size: clamp(1rem, 2.5vw, 1.4rem); font-weight: bold; margin-top: 0.4rem;
+  min-height: 1.8rem; transition: opacity 0.3s;
+}
+.feedback-correct { color: #4cff4c; text-shadow: 0 0 10px rgba(76,255,76,0.5); }
+.feedback-wrong { color: #ff9494; text-shadow: 0 0 10px rgba(255,148,148,0.5); }
+
+/* Teaching overlay */
+#teachingOverlay {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 60;
+  background: rgba(0,0,0,0.85); color: #fff; padding: 1.5rem 2rem; border-radius: 20px;
+  text-align: center; max-width: 500px; width: 90%; display: none;
+  backdrop-filter: blur(8px); border: 2px solid #ff6b35;
+}
+#teachingOverlay.show { display: block; }
+#teachingOverlay h3 { color: #ff6b35; margin-bottom: 0.5rem; font-size: 1.1rem; }
+#teachingOverlay .solution { font-size: 1.5rem; margin: 0.5rem 0; color: #ffcc00; }
+
+/* Milestone popup */
+#milestonePopup {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+  z-index: 70; background: rgba(0,0,0,0.9); color: #fff; padding: 2rem;
+  border-radius: 20px; text-align: center; min-width: 300px;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 3px solid #ffcc00;
+}
+#milestonePopup.show { transform: translate(-50%, -50%) scale(1); }
+#milestonePopup .milestone-emoji { font-size: 3rem; }
+#milestonePopup .milestone-text { font-size: 1.3rem; margin: 0.5rem 0; color: #ffcc00; }
+#milestonePopup .milestone-sub { font-size: 0.9rem; color: #aaa; }
+
+/* Concept unlock */
+#conceptUnlock {
+  position: fixed; inset: 0; z-index: 80; display: none;
+  align-items: center; justify-content: center; background: rgba(0,0,0,0.9);
+}
+#conceptUnlock.show { display: flex; }
+#conceptUnlock .unlock-text {
+  font-size: clamp(2rem, 6vw, 4rem); color: #ffcc00; font-weight: bold;
+  text-shadow: 0 0 30px rgba(255,204,0,0.5), 0 0 60px rgba(255,204,0,0.3);
+  text-align: center; animation: unlockZoom 2s ease-out forwards;
+}
+@keyframes unlockZoom {
+  0% { transform: scale(0.1); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Victory screen */
+#victoryScreen {
+  position: fixed; inset: 0; z-index: 90; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.95);
+}
+#victoryScreen.show { display: flex; }
+#victoryScreen h1 { font-size: 3rem; color: #ffcc00; text-shadow: 0 0 30px rgba(255,204,0,0.5); margin-bottom: 1rem; }
+#victoryScreen p { color: #fff; font-size: 1.2rem; margin-bottom: 0.5rem; }
+#victoryScreen button {
+  margin-top: 2rem; padding: 1rem 2rem; font-size: 1.3rem; border: none;
+  background: linear-gradient(135deg, #e8760a, #f5a623); color: #fff;
+  border-radius: 14px; cursor: pointer; font-weight: bold;
+}
+
+#questionArea.hidden, #hud.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Start Screen -->
+<div id="startScreen">
+  <h1>🥕 Carrot Runner</h1>
+  <p class="subtitle">A Math Adventure!</p>
+  <div class="menu-box">
+    <div id="playerNameArea">
+      <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20">
+    </div>
+    <button id="startBtn">🐇 Start Running!</button>
+    <div class="menu-nav">
+      <button onclick="showPanel('gardenPanel')">🌱 Garden</button>
+      <button onclick="showPanel('skinsPanel')">🐰 Skins</button>
+      <button onclick="showPanel('statsPanel')">📊 Stats</button>
+      <button onclick="showPanel('dailyPanel')">📅 Daily</button>
+    </div>
+    <div class="leaderboard" id="leaderboardArea"></div>
+    <div class="high-score" id="highScoreText"></div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="scoreDisplay">🥕 0</div>
+  <div id="streakDisplay">🔥 0</div>
+  <div id="comboDisplay">FAST! 2x</div>
+</div>
+<div id="envName"></div>
+<button id="menuBtn" style="display:none" onclick="returnToMenu()">Menu</button>
+
+<!-- Question Area -->
+<div id="questionArea" class="hidden">
+  <div id="questionText"></div>
+  <div id="hintText"></div>
+  <input type="text" id="answerInput" inputmode="numeric" autocomplete="off" placeholder="?">
+  <div id="feedback"></div>
+</div>
+
+<!-- Teaching Overlay -->
+<div id="teachingOverlay">
+  <h3>Let's learn this!</h3>
+  <div class="solution" id="teachingSolution"></div>
+</div>
+
+<!-- Milestone Popup -->
+<div id="milestonePopup">
+  <div class="milestone-emoji" id="milestoneEmoji"></div>
+  <div class="milestone-text" id="milestoneText"></div>
+  <div class="milestone-sub" id="milestoneSub"></div>
+</div>
+
+<!-- Concept Unlock -->
+<div id="conceptUnlock">
+  <div class="unlock-text" id="unlockText"></div>
+</div>
+
+<!-- Victory Screen -->
+<div id="victoryScreen">
+  <h1>🏆 YOU BEAT THE GAME! 🏆</h1>
+  <p>Incredible! You reached streak 99!</p>
+  <p id="victoryStats"></p>
+  <button onclick="returnToMenu()">Return to Menu</button>
+</div>
+
+<!-- Garden Panel -->
+<div class="overlay-panel" id="gardenPanel">
+  <div class="panel-box">
+    <button class="panel-close" onclick="hidePanel('gardenPanel')">✕</button>
+    <h2>🌱 Carrot Garden</h2>
+    <canvas id="gardenCanvas"></canvas>
+    <p style="text-align:center;margin-top:0.5rem;color:#888" id="gardenInfo"></p>
+  </div>
+</div>
+
+<!-- Skins Panel -->
+<div class="overlay-panel" id="skinsPanel">
+  <div class="panel-box">
+    <button class="panel-close" onclick="hidePanel('skinsPanel')">✕</button>
+    <h2>🐰 Rabbit Skins</h2>
+    <div class="skin-grid" id="skinGrid"></div>
+  </div>
+</div>
+
+<!-- Stats Panel -->
+<div class="overlay-panel" id="statsPanel">
+  <div class="panel-box">
+    <button class="panel-close" onclick="hidePanel('statsPanel')">✕</button>
+    <h2>📊 Progress Dashboard</h2>
+    <div id="statsContent"></div>
+  </div>
+</div>
+
+<!-- Daily Challenge Panel -->
+<div class="overlay-panel" id="dailyPanel">
+  <div class="panel-box">
+    <button class="panel-close" onclick="hidePanel('dailyPanel')">✕</button>
+    <h2>📅 Daily Challenge</h2>
+    <div id="dailyContent"></div>
+    <div id="calendarArea" style="margin-top:1rem"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.152.0/build/three.min.js"></script>
+<script>
+// ===================== PERSISTENCE =====================
+const Storage = {
+  get(key, def) { try { return JSON.parse(localStorage.getItem('cr_' + key)) || def; } catch { return def; } },
+  set(key, val) { localStorage.setItem('cr_' + key, JSON.stringify(val)); }
+};
+
+let playerName = '';
+const SKINS = [
+  { id: 'white', name: 'White', color: 0xf5f0e8, req: 0 },
+  { id: 'brown', name: 'Brown', color: 0x8B6914, req: 25 },
+  { id: 'golden', name: 'Golden', color: 0xFFD700, req: 50 },
+  { id: 'galaxy', name: 'Galaxy', color: 0x4400aa, req: 100 }
+];
+
+function getTotalCorrect() { return Storage.get('totalCorrect', 0); }
+function getSelectedSkin() { return Storage.get('selectedSkin', 'white'); }
+function getSkinColor() {
+  const s = SKINS.find(s => s.id === getSelectedSkin()) || SKINS[0];
+  return s.color;
+}
+
+// ===================== AUDIO ENGINE =====================
+const AudioEngine = (() => {
+  let ctx;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function playTone(freq, duration, type = 'sine', vol = 0.12) {
+    const c = getCtx(), o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    o.connect(g); g.connect(c.destination);
+    o.start(); o.stop(c.currentTime + duration);
+  }
+
+  function playNoise(duration, vol = 0.05) {
+    const c = getCtx();
+    const bufferSize = c.sampleRate * duration;
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    const f = c.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 800;
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(); src.stop(c.currentTime + duration);
+  }
+
+  return {
+    correct() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.25, 'sine', 0.1), i * 80)); },
+    wrong() { playTone(300, 0.4, 'triangle', 0.08); setTimeout(() => playTone(250, 0.4, 'triangle', 0.06), 150); },
+    milestone() { [523, 659, 784, 880, 1047, 1175, 1319].forEach((f, i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.08), i * 100)); },
+    collect() { playTone(880, 0.15, 'sine', 0.08); setTimeout(() => playTone(1100, 0.2, 'sine', 0.08), 80); },
+    bossDrum() {
+      playTone(80, 0.4, 'triangle', 0.15);
+      playTone(60, 0.5, 'sawtooth', 0.08);
+      playNoise(0.3, 0.08);
+    },
+    speedZone() { [400,600,800,1000,1200].forEach((f,i) => setTimeout(() => playTone(f, 0.1, 'sawtooth', 0.06), i*40)); },
+    footstep(biome) {
+      const freqs = { meadow: 150, sunset: 130, snow: 2000, underwater: 300, space: 500, rainbow: 700 };
+      const types = { meadow: 'triangle', sunset: 'triangle', snow: 'sine', underwater: 'sine', space: 'sine', rainbow: 'sine' };
+      const biomeNames = ['meadow','sunset','snow','underwater','space','rainbow'];
+      const b = biomeNames[biome] || 'meadow';
+      if (b === 'snow') playNoise(0.05, 0.03);
+      else if (b === 'underwater') { playTone(freqs[b], 0.08, types[b], 0.03); playNoise(0.05, 0.02); }
+      else playTone(freqs[b] || 150, 0.06, types[b] || 'triangle', 0.03);
+    },
+    squeak() { playTone(1800, 0.1, 'sine', 0.06); setTimeout(() => playTone(2200, 0.08, 'sine', 0.05), 60); },
+    conceptUnlock() {
+      [261,329,392,523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.4, 'sine', 0.1), i*120));
+      setTimeout(() => playNoise(0.3, 0.06), 600);
+    },
+    fastAnswer() { playTone(1200, 0.1, 'sine', 0.08); playTone(1500, 0.15, 'sine', 0.06); },
+    emptySubmit() { playTone(200, 0.15, 'triangle', 0.04); setTimeout(() => playTone(160, 0.2, 'triangle', 0.03), 100); },
+    victory() {
+      const melody = [523,659,784,1047,784,1047,1319,1047,1319,1568];
+      melody.forEach((f,i) => setTimeout(() => playTone(f, 0.4, 'sine', 0.1), i*200));
+    },
+    ambient(biome) {} // ambient handled in loop
+  };
+})();
+
+// Ambient sound loop
+let ambientInterval = null;
+function startAmbient(biomeIdx) {
+  stopAmbient();
+  const play = () => {
+    try {
+      const c = new (window.AudioContext || window.webkitAudioContext)();
+      if (c.state === 'suspended') c.resume();
+      const o = c.createOscillator(), g = c.createGain();
+      const ambientConfig = [
+        { freq: 200, type: 'sine', vol: 0.015 },
+        { freq: 120, type: 'triangle', vol: 0.012 },
+        { freq: 400, type: 'sine', vol: 0.01 },
+        { freq: 250, type: 'sine', vol: 0.015 },
+        { freq: 100, type: 'sawtooth', vol: 0.008 },
+        { freq: 600, type: 'sine', vol: 0.012 }
+      ];
+      const cfg = ambientConfig[biomeIdx] || ambientConfig[0];
+      o.type = cfg.type; o.frequency.value = cfg.freq + Math.random() * 50;
+      g.gain.setValueAtTime(cfg.vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 2);
+      o.connect(g); g.connect(c.destination);
+      o.start(); o.stop(c.currentTime + 2);
+    } catch(e) {}
+  };
+  ambientInterval = setInterval(play, 3000);
+}
+function stopAmbient() { if (ambientInterval) { clearInterval(ambientInterval); ambientInterval = null; } }
+
+// ===================== MATH ENGINE =====================
+const MathEngine = {
+  // Adaptive difficulty state
+  availableOps: ['add'],
+  currentMaxNum: 9,
+  consecutiveCorrect: { add: 0, sub: 0, mul: 0, div: 0 },
+  consecutiveWrong: 0,
+  totalQuestionsAnswered: 0,
+  questionStartTime: 0,
+
+  // Spaced repetition
+  wrongProblems: [], // {text, a, b, op, timesCorrect}
+  retryPool: [],
+
+  // Boss & speed
+  questionCount: 0,
+  isBoss: false,
+  isSpeedZone: false,
+  speedZoneLeft: 0,
+
+  // Stats
+  stats: { add: {correct:0,total:0,totalTime:0}, sub: {correct:0,total:0,totalTime:0}, mul: {correct:0,total:0,totalTime:0}, div: {correct:0,total:0,totalTime:0} },
+
+  reset() {
+    this.availableOps = ['add'];
+    this.currentMaxNum = 9;
+    this.consecutiveCorrect = { add: 0, sub: 0, mul: 0, div: 0 };
+    this.consecutiveWrong = 0;
+    this.questionCount = 0;
+    this.isBoss = false;
+    this.isSpeedZone = false;
+    this.speedZoneLeft = 0;
+    this.totalQuestionsAnswered = 0;
+    this.stats = { add: {correct:0,total:0,totalTime:0}, sub: {correct:0,total:0,totalTime:0}, mul: {correct:0,total:0,totalTime:0}, div: {correct:0,total:0,totalTime:0} };
+    // Load persisted wrong problems
+    this.wrongProblems = Storage.get('wrongProblems', []);
+  },
+
+  checkUnlocks() {
+    const opSequence = ['add', 'sub', 'mul', 'div'];
+    for (let i = 0; i < opSequence.length; i++) {
+      const op = opSequence[i];
+      if (!this.availableOps.includes(op)) {
+        // Check if previous op has 10 consecutive correct
+        const prev = opSequence[i-1];
+        if (prev && this.consecutiveCorrect[prev] >= 10) {
+          this.availableOps.push(op);
+          return op; // Return newly unlocked op
+        }
+      }
+    }
+    return null;
+  },
+
+  generate(forceRetry = false) {
+    this.questionCount++;
+    this.questionStartTime = Date.now();
+
+    // Check speed zone
+    if (this.questionCount > 0 && this.questionCount % 15 === 0) {
+      this.isSpeedZone = true;
+      this.speedZoneLeft = 3;
+    }
+    if (this.isSpeedZone) {
+      this.speedZoneLeft--;
+      if (this.speedZoneLeft <= 0) this.isSpeedZone = false;
+    }
+
+    // Boss question every 10
+    this.isBoss = (this.questionCount % 10 === 0);
+
+    // 30% chance to pull from retry pool if available
+    if (!forceRetry && this.wrongProblems.length > 0 && Math.random() < 0.3) {
+      const wp = this.wrongProblems[Math.floor(Math.random() * this.wrongProblems.length)];
+      return this._generateFromProblem(wp);
+    }
+
+    // 20% chance for word problem
+    const useWord = Math.random() < 0.2;
+
+    const op = this.availableOps[Math.floor(Math.random() * this.availableOps.length)];
+    let max = this.currentMaxNum;
+    if (this.isBoss) max = Math.min(max + 5, 50);
+
+    let a, b, answer, symbol, hint, text, wordText = null;
+
+    switch (op) {
+      case 'add':
+        a = Math.floor(Math.random() * max) + 1;
+        b = Math.floor(Math.random() * max) + 1;
+        answer = a + b; symbol = '+';
+        if (b <= 3) hint = `Count up ${b} from ${a}!`;
+        else if (a + b <= 10) hint = `These add up to less than 10!`;
+        else if (a >= 10 || b >= 10) hint = `Add the tens first, then the ones!`;
+        else hint = `Try ${a} + ${Math.min(a,b)} first, then add the rest!`;
+        if (useWord) wordText = `Bunny has ${a} carrots and finds ${b} more. How many total?`;
+        break;
+      case 'sub':
+        a = Math.floor(Math.random() * max) + 2;
+        b = Math.floor(Math.random() * a) + 1;
+        answer = a - b; symbol = '−';
+        if (b <= 3) hint = `Count back ${b} from ${a}!`;
+        else hint = `Think: what plus ${b} equals ${a}?`;
+        if (useWord) wordText = `Bunny had ${a} carrots and gave away ${b}. How many are left?`;
+        break;
+      case 'mul':
+        a = Math.floor(Math.random() * Math.min(max, 12)) + 1;
+        b = Math.floor(Math.random() * Math.min(max, 12)) + 1;
+        answer = a * b; symbol = '×';
+        if (b === 2) hint = `Double ${a}!`;
+        else if (b === 5) hint = `Count by 5s, ${a} times!`;
+        else if (b === 10) hint = `Just add a 0 to ${a}!`;
+        else if (b === 1) hint = `Any number times 1 is itself!`;
+        else hint = `Think of ${a} groups of ${b}!`;
+        if (useWord) wordText = `There are ${a} rows of carrots with ${b} in each row. How many carrots?`;
+        break;
+      case 'div':
+        b = Math.floor(Math.random() * Math.min(max, 12)) + 1;
+        answer = Math.floor(Math.random() * Math.min(max, 12)) + 1;
+        a = b * answer; symbol = '÷';
+        if (b === 2) hint = `What's half of ${a}?`;
+        else if (b === 1) hint = `Dividing by 1 is easy!`;
+        else hint = `How many groups of ${b} fit in ${a}?`;
+        if (useWord) wordText = `${a} carrots shared equally among ${b} bunnies. How many each?`;
+        break;
+    }
+
+    text = `${a} ${symbol} ${b}`;
+    return { text, answer, hint, a, b, op, isBoss: this.isBoss, isSpeedZone: this.isSpeedZone, wordText };
+  },
+
+  _generateFromProblem(wp) {
+    // Generate the exact problem from retry pool
+    let symbol = {add:'+', sub:'−', mul:'×', div:'÷'}[wp.op];
+    let hint = `You've seen this one before - you can do it!`;
+    return { text: `${wp.a} ${symbol} ${wp.b}`, answer: wp.answer, hint, a: wp.a, b: wp.b, op: wp.op, isBoss: this.isBoss, isSpeedZone: this.isSpeedZone, isRetry: true };
+  },
+
+  generateSimilar(q) {
+    // Generate similar but not identical problem
+    let a = q.a + (Math.random() < 0.5 ? 1 : -1);
+    let b = q.b + (Math.random() < 0.5 ? 1 : -1);
+    if (a < 1) a = q.a + 1;
+    if (b < 1) b = q.b + 1;
+    let answer, symbol;
+    switch(q.op) {
+      case 'add': answer = a+b; symbol = '+'; break;
+      case 'sub': if (b > a) [a,b] = [b,a]; answer = a-b; symbol = '−'; break;
+      case 'mul': answer = a*b; symbol = '×'; break;
+      case 'div': a = b * (Math.floor(Math.random()*10)+1); answer = a/b; symbol = '÷'; break;
+    }
+    const hint = `This is like the last one. You got this!`;
+    return { text: `${a} ${symbol} ${b}`, answer, hint, a, b, op: q.op, isBoss: false, isSpeedZone: this.isSpeedZone };
+  },
+
+  recordCorrect(q) {
+    const timeTaken = (Date.now() - this.questionStartTime) / 1000;
+    if (this.stats[q.op]) {
+      this.stats[q.op].correct++;
+      this.stats[q.op].total++;
+      this.stats[q.op].totalTime += timeTaken;
+    }
+    this.consecutiveCorrect[q.op]++;
+    this.consecutiveWrong = 0;
+
+    // Check spaced repetition
+    if (q.isRetry) {
+      const wp = this.wrongProblems.find(w => w.a === q.a && w.b === q.b && w.op === q.op);
+      if (wp) {
+        wp.timesCorrect = (wp.timesCorrect || 0) + 1;
+        if (wp.timesCorrect >= 2) {
+          this.wrongProblems = this.wrongProblems.filter(w => w !== wp);
+        }
+      }
+    }
+    Storage.set('wrongProblems', this.wrongProblems);
+
+    return { fast: timeTaken < 3, timeTaken };
+  },
+
+  recordWrong(q) {
+    const timeTaken = (Date.now() - this.questionStartTime) / 1000;
+    if (this.stats[q.op]) {
+      this.stats[q.op].total++;
+      this.stats[q.op].totalTime += timeTaken;
+    }
+    this.consecutiveCorrect[q.op] = 0;
+    this.consecutiveWrong++;
+
+    // Reduce difficulty if 5 wrong in a row
+    if (this.consecutiveWrong >= 5) {
+      this.currentMaxNum = Math.max(5, this.currentMaxNum - 3);
+      this.consecutiveWrong = 0;
+    }
+
+    // Add to retry pool
+    const existing = this.wrongProblems.find(w => w.a === q.a && w.b === q.b && w.op === q.op);
+    if (!existing) {
+      this.wrongProblems.push({ a: q.a, b: q.b, op: q.op, answer: q.answer, timesCorrect: 0 });
+      if (this.wrongProblems.length > 30) this.wrongProblems.shift();
+    }
+    Storage.set('wrongProblems', this.wrongProblems);
+  },
+
+  getTeaching(q) {
+    const {a, b, op, answer} = q;
+    switch(op) {
+      case 'add': {
+        if (a < 10 && b < 10) return `${a} + ${b} = ${answer}. Count up ${b} from ${a}!`;
+        const tens = Math.floor(a/10)*10; const ones = a%10;
+        if (tens > 0) return `${a} + ${b}\n= ${tens} + ${ones} + ${b}\n= ${tens} + ${ones+b}\n= ${answer}`;
+        return `${a} + ${b} = ${answer}`;
+      }
+      case 'sub': return `${a} − ${b} = ${answer}\nThink: ${answer} + ${b} = ${a}`;
+      case 'mul': {
+        const half = Math.floor(b/2);
+        if (b > 4 && b % 2 === 0) return `${a} × ${b}\n= ${a} × ${half} + ${a} × ${half}\n= ${a*half} + ${a*half}\n= ${answer}`;
+        return `${a} × ${b} = ${a} added ${b} times = ${answer}`;
+      }
+      case 'div': return `${a} ÷ ${b} = ${answer}\nBecause ${answer} × ${b} = ${a}`;
+    }
+    return `The answer is ${answer}`;
+  }
+};
+
+// ===================== DAILY CHALLENGE =====================
+function getDailyKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function generateDailyQuestions() {
+  const key = getDailyKey();
+  const seedNum = key.split('-').join('') * 1;
+  const rng = seededRandom(seedNum);
+  const questions = [];
+  for (let i = 0; i < 20; i++) {
+    const ops = ['add','sub','mul','div'];
+    const op = ops[Math.floor(rng() * ops.length)];
+    let a, b, answer, symbol;
+    switch(op) {
+      case 'add': a = Math.floor(rng()*12)+1; b = Math.floor(rng()*12)+1; answer = a+b; symbol='+'; break;
+      case 'sub': a = Math.floor(rng()*15)+3; b = Math.floor(rng()*a)+1; answer = a-b; symbol='−'; break;
+      case 'mul': a = Math.floor(rng()*10)+1; b = Math.floor(rng()*10)+1; answer = a*b; symbol='×'; break;
+      case 'div': b = Math.floor(rng()*10)+1; answer = Math.floor(rng()*10)+1; a = b*answer; symbol='÷'; break;
+    }
+    questions.push({text:`${a} ${symbol} ${b}`, answer, a, b, op, hint:'Daily challenge!'});
+  }
+  return questions;
+}
+
+// ===================== ENVIRONMENT THEMES =====================
+const ENVS = [
+  { name: 'Sunny Meadow', sky: 0x87CEEB, ground: 0x4a8c1c, fog: 0x87CEEB, ambient: 0x888888, sun: 0xffffff, sunColor: 0xffffff, pathColor: 0xc4a35a },
+  { name: 'Sunset Forest', sky: 0xff7b39, ground: 0x2d6b0f, fog: 0xff9050, ambient: 0xcc8855, sun: 0xffaa44, sunColor: 0xff8833, pathColor: 0x8b6914 },
+  { name: 'Snowy Mountains', sky: 0xb0c4de, ground: 0xe8e8f0, fog: 0xc8d8e8, ambient: 0x99aacc, sun: 0xddeeff, sunColor: 0x8899cc, pathColor: 0xaabbcc },
+  { name: 'Underwater World', sky: 0x006688, ground: 0x1a5c5c, fog: 0x004466, ambient: 0x44aaaa, sun: 0x66ccdd, sunColor: 0x2288aa, pathColor: 0x2a7a6a },
+  { name: 'Outer Space', sky: 0x000011, ground: 0x222233, fog: 0x000022, ambient: 0x333355, sun: 0x8888ff, sunColor: 0x6644aa, pathColor: 0x444466 },
+  { name: 'Rainbow Dimension', sky: 0x220033, ground: 0x663399, fog: 0x330044, ambient: 0xaa66cc, sun: 0xff88ff, sunColor: 0xcc44ff, pathColor: 0xaa44dd }
+];
+
+function getEnvIndex(streak) { return Math.min(Math.floor(streak / 10), 5); }
+
+// ===================== STREAK REWARDS =====================
+const STREAK_REWARDS = [
+  { streak: 10, name: 'Red Tennis Shoes', emoji: '👟' },
+  { streak: 15, name: 'Fire Trail', emoji: '🔥' },
+  { streak: 20, name: 'Backpack', emoji: '🎒' },
+  { streak: 25, name: 'Rainbow Trail', emoji: '🌈' },
+  { streak: 30, name: 'Baseball Cap', emoji: '🧢' },
+  { streak: 35, name: 'Fox Companion', emoji: '🦊' },
+  { streak: 40, name: 'Sunglasses', emoji: '😎' },
+  { streak: 45, name: 'Wings', emoji: '🪽' },
+  { streak: 50, name: 'Gold Chain', emoji: '⛓️' },
+  { streak: 55, name: 'Hoverboard', emoji: '🛹' },
+  { streak: 60, name: 'Bow & Arrow', emoji: '🏹' },
+  { streak: 65, name: 'Star Trail', emoji: '⭐' },
+  { streak: 70, name: 'Jetpack', emoji: '🚀' },
+  { streak: 80, name: 'SUPER SAIYAN', emoji: '💥' },
+  { streak: 90, name: 'GENIE MODE', emoji: '🧞' },
+  { streak: 99, name: 'VICTORY!', emoji: '🏆' }
+];
+
+// ===================== THREE.JS GAME =====================
+let scene, camera, renderer, clock;
+let rabbitGroup;
+let score = 0, streak = 0, currentQuestion = null;
+let gameRunning = false;
+let runDistance = 0;
+let carrotMesh = null;
+let carrotTargetZ = -30;
+let particles = [];
+let envObjects = [];
+let currentEnvIndex = 0;
+let envTransition = 0;
+let rabbitState = 'running';
+let stateTimer = 0;
+let pathSegments = [];
+let decorations = [];
+let trailParticles = [];
+let streakItems = {};
+let foxCompanion = null;
+let lastFootstepTime = 0;
+let totalCorrectThisGame = 0;
+
+let rabbitParts = {};
+
+// Bloom/glow simulation via emissive materials
+function createGlowMaterial(color, intensity = 0.5) {
+  return new THREE.MeshPhongMaterial({
+    color: color,
+    emissive: color,
+    emissiveIntensity: intensity,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.9
+  });
+}
+
+function initThree() {
+  scene = new THREE.Scene();
+  clock = new THREE.Clock();
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 4, 8);
+  camera.lookAt(0, 1, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.body.prepend(renderer.domElement);
+  renderer.domElement.id = 'gameCanvas';
+
+  // Lights
+  const amb = new THREE.AmbientLight(0x888888, 0.6);
+  amb.name = 'ambient';
+  scene.add(amb);
+
+  const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+  sun.name = 'sun';
+  sun.position.set(5, 15, 5);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.near = 0.1;
+  sun.shadow.camera.far = 80;
+  sun.shadow.camera.left = -25;
+  sun.shadow.camera.right = 25;
+  sun.shadow.camera.top = 25;
+  sun.shadow.camera.bottom = -25;
+  sun.shadow.bias = -0.001;
+  scene.add(sun);
+
+  // Hemisphere light for better ambient
+  const hemi = new THREE.HemisphereLight(0x87CEEB, 0x4a8c1c, 0.3);
+  hemi.name = 'hemi';
+  scene.add(hemi);
+
+  scene.fog = new THREE.Fog(0x87CEEB, 40, 120);
+
+  // Ground
+  const groundGeo = new THREE.PlaneGeometry(200, 500);
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4a8c1c });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.z = -150;
+  ground.receiveShadow = true;
+  ground.name = 'ground';
+  scene.add(ground);
+
+  buildPath();
+  buildRabbit();
+  buildCarrot();
+
+  for (let z = 10; z > -120; z -= 4) spawnDecoration(z);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+function buildPath() {
+  for (let i = 0; i < 40; i++) {
+    const seg = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.5, 8),
+      new THREE.MeshLambertMaterial({ color: 0xc4a35a })
+    );
+    seg.rotation.x = -Math.PI / 2;
+    seg.position.y = 0.01;
+    seg.position.z = -i * 8 + 20;
+    seg.receiveShadow = true;
+    seg.name = 'pathSeg';
+    scene.add(seg);
+    pathSegments.push(seg);
+
+    for (const side of [-1, 1]) {
+      const border = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.18, 8),
+        new THREE.MeshLambertMaterial({ color: 0x8B7355 })
+      );
+      border.position.set(side * 2.25, 0.09, -i * 8 + 20);
+      border.castShadow = true;
+      border.name = 'pathBorder';
+      scene.add(border);
+      pathSegments.push(border);
+    }
+  }
+}
+
+function buildRabbit() {
+  rabbitGroup = new THREE.Group();
+  rabbitGroup.position.set(0, 0, 0);
+
+  const skinColor = getSkinColor();
+  const white = new THREE.MeshPhongMaterial({ color: skinColor, shininess: 30 });
+  const pink = new THREE.MeshPhongMaterial({ color: 0xffaaaa, shininess: 20 });
+  const dark = new THREE.MeshPhongMaterial({ color: 0x332222, shininess: 60 });
+
+  // Body - more geometry
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 18), white);
+  body.position.y = 1.0;
+  body.scale.set(1, 1.15, 1.05);
+  body.castShadow = true;
+  rabbitGroup.add(body);
+  rabbitParts.body = body;
+
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 18), white);
+  head.position.set(0, 1.85, 0.05);
+  head.castShadow = true;
+  rabbitGroup.add(head);
+  rabbitParts.head = head;
+
+  // Eyes
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), dark);
+    eye.position.set(side * 0.18, 1.92, 0.42);
+    rabbitGroup.add(eye);
+
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    eyeWhite.position.set(side * 0.15, 1.95, 0.48);
+    rabbitGroup.add(eyeWhite);
+  }
+
+  // Nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), pink);
+  nose.position.set(0, 1.78, 0.49);
+  rabbitGroup.add(nose);
+
+  // Mouth line (tiny dark bar)
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.01, 0.01), dark);
+  mouth.position.set(0, 1.73, 0.49);
+  rabbitGroup.add(mouth);
+
+  // Whiskers (thin cylinders that sway)
+  rabbitParts.whiskers = [];
+  for (const side of [-1, 1]) {
+    for (let w = 0; w < 3; w++) {
+      const whisker = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.004, 0.002, 0.3, 4),
+        new THREE.MeshBasicMaterial({ color: 0x555555 })
+      );
+      whisker.position.set(side * 0.2, 1.76 + (w - 1) * 0.03, 0.45);
+      whisker.rotation.z = side * (0.4 + w * 0.2);
+      whisker.rotation.y = side * 0.3;
+      rabbitGroup.add(whisker);
+      rabbitParts.whiskers.push({ mesh: whisker, side, idx: w });
+    }
+  }
+
+  // Cheeks
+  for (const side of [-1, 1]) {
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), pink);
+    cheek.position.set(side * 0.32, 1.78, 0.34);
+    cheek.scale.set(1, 0.7, 0.7);
+    rabbitGroup.add(cheek);
+  }
+
+  // Ears
+  for (const side of [-1, 1]) {
+    const earGroup = new THREE.Group();
+    earGroup.position.set(side * 0.18, 2.3, -0.05);
+    earGroup.rotation.z = side * 0.15;
+
+    const earOuter = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.65, 12, 12), white);
+    earOuter.castShadow = true;
+    earGroup.add(earOuter);
+
+    const earInner = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.48, 10, 10), pink);
+    earInner.position.z = 0.03;
+    earGroup.add(earInner);
+
+    rabbitGroup.add(earGroup);
+    rabbitParts[side < 0 ? 'earL' : 'earR'] = earGroup;
+  }
+
+  // Arms with rounded paws
+  for (const side of [-1, 1]) {
+    const armGroup = new THREE.Group();
+    armGroup.position.set(side * 0.52, 1.15, 0.1);
+
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.35, 8, 8), white);
+    arm.castShadow = true;
+    armGroup.add(arm);
+
+    // Rounded paw
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), pink);
+    paw.position.y = -0.25;
+    armGroup.add(paw);
+
+    rabbitGroup.add(armGroup);
+    rabbitParts[side < 0 ? 'armL' : 'armR'] = armGroup;
+  }
+
+  // Legs with rounded paws
+  for (const side of [-1, 1]) {
+    const legGroup = new THREE.Group();
+    legGroup.position.set(side * 0.22, 0.55, 0);
+
+    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.28, 8, 8), white);
+    thigh.castShadow = true;
+    legGroup.add(thigh);
+
+    // Bigger rounded foot
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), white);
+    foot.position.set(0, -0.24, 0.08);
+    foot.scale.set(0.8, 0.5, 1.4);
+    legGroup.add(foot);
+
+    // Paw pad
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), pink);
+    pad.position.set(0, -0.28, 0.15);
+    legGroup.add(pad);
+
+    rabbitGroup.add(legGroup);
+    rabbitParts[side < 0 ? 'legL' : 'legR'] = legGroup;
+  }
+
+  // Fluffy tail (cluster of spheres)
+  const tailGroup = new THREE.Group();
+  tailGroup.position.set(0, 0.9, -0.55);
+  for (let i = 0; i < 8; i++) {
+    const puff = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06 + Math.random() * 0.06, 8, 8),
+      white
+    );
+    puff.position.set(
+      (Math.random() - 0.5) * 0.12,
+      (Math.random() - 0.5) * 0.12,
+      (Math.random() - 0.5) * 0.1
+    );
+    tailGroup.add(puff);
+  }
+  // Main tail sphere
+  const tailMain = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), white);
+  tailGroup.add(tailMain);
+  rabbitGroup.add(tailGroup);
+  rabbitParts.tail = tailGroup;
+
+  scene.add(rabbitGroup);
+}
+
+function updateRabbitSkin() {
+  if (!rabbitGroup) return;
+  const color = getSkinColor();
+  rabbitGroup.traverse(child => {
+    if (child.isMesh && child.material && child.material.color) {
+      const c = child.material.color;
+      // Only update "white" colored parts (the skin)
+      if (c.r > 0.8 && c.g > 0.8 && c.b > 0.7) {
+        child.material.color.setHex(color);
+      }
+    }
+  });
+}
+
+// ===================== STREAK ITEMS ON RABBIT =====================
+function updateStreakItems() {
+  // Remove all existing streak items
+  Object.values(streakItems).forEach(item => { if (item.parent) item.parent.remove(item); });
+  streakItems = {};
+  if (foxCompanion) { scene.remove(foxCompanion); foxCompanion = null; }
+
+  if (streak >= 10) { // Red shoes
+    for (const side of [-1, 1]) {
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.22), new THREE.MeshPhongMaterial({color: 0xcc0000}));
+      shoe.position.set(side * 0.22, 0.24, 0.08);
+      rabbitGroup.add(shoe);
+      streakItems['shoe' + side] = shoe;
+    }
+  }
+
+  if (streak >= 20) { // Backpack
+    const bp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.2), new THREE.MeshPhongMaterial({color: 0xcc2222}));
+    bp.position.set(0, 1.15, -0.45);
+    rabbitGroup.add(bp);
+    streakItems.backpack = bp;
+    // Straps
+    for (const side of [-1, 1]) {
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.04), new THREE.MeshPhongMaterial({color: 0x991111}));
+      strap.position.set(side * 0.12, 1.25, -0.3);
+      rabbitGroup.add(strap);
+      streakItems['strap' + side] = strap;
+    }
+  }
+
+  if (streak >= 30) { // Baseball cap
+    const capBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 16, 1, false, 0, Math.PI), new THREE.MeshPhongMaterial({color: 0x2244aa}));
+    capBrim.position.set(0, 2.15, 0.2);
+    capBrim.rotation.x = -0.3;
+    rabbitGroup.add(capBrim);
+    streakItems.capBrim = capBrim;
+    const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshPhongMaterial({color: 0x2244aa}));
+    capTop.position.set(0, 2.15, 0);
+    rabbitGroup.add(capTop);
+    streakItems.capTop = capTop;
+  }
+
+  if (streak >= 35) { // Fox companion
+    foxCompanion = buildFox();
+    scene.add(foxCompanion);
+  }
+
+  if (streak >= 40) { // Sunglasses
+    const glassMat = new THREE.MeshPhongMaterial({color: 0x111111, shininess: 100});
+    for (const side of [-1, 1]) {
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.03), glassMat);
+      lens.position.set(side * 0.16, 1.92, 0.49);
+      rabbitGroup.add(lens);
+      streakItems['lens' + side] = lens;
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.03), glassMat);
+    bridge.position.set(0, 1.93, 0.49);
+    rabbitGroup.add(bridge);
+    streakItems.bridge = bridge;
+  }
+
+  if (streak >= 45) { // Wings
+    for (const side of [-1, 1]) {
+      const wingGroup = new THREE.Group();
+      wingGroup.position.set(side * 0.5, 1.3, -0.2);
+      const wing = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.6, 0.4),
+        new THREE.MeshPhongMaterial({color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8})
+      );
+      wing.rotation.y = side * 0.5;
+      wingGroup.add(wing);
+      const wing2 = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.4, 0.3),
+        new THREE.MeshPhongMaterial({color: 0xeeeeff, side: THREE.DoubleSide, transparent: true, opacity: 0.7})
+      );
+      wing2.position.set(side * 0.2, 0.1, 0);
+      wing2.rotation.y = side * 0.3;
+      wingGroup.add(wing2);
+      rabbitGroup.add(wingGroup);
+      streakItems['wing' + side] = wingGroup;
+    }
+  }
+
+  if (streak >= 50) { // Gold chain
+    const chain = new THREE.Mesh(
+      new THREE.TorusGeometry(0.2, 0.025, 8, 16, Math.PI),
+      new THREE.MeshPhongMaterial({color: 0xFFD700, shininess: 100})
+    );
+    chain.position.set(0, 1.55, 0.3);
+    chain.rotation.x = 0.3;
+    rabbitGroup.add(chain);
+    streakItems.chain = chain;
+  }
+
+  if (streak >= 55) { // Hoverboard
+    const board = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.06, 1.0),
+      createGlowMaterial(0x00ccff, 0.6)
+    );
+    board.position.set(0, -0.1, 0);
+    rabbitGroup.add(board);
+    streakItems.hoverboard = board;
+  }
+
+  if (streak >= 60) { // Bow and arrow
+    const bowGroup = new THREE.Group();
+    bowGroup.position.set(-0.7, 1.2, 0);
+    const bow = new THREE.Mesh(
+      new THREE.TorusGeometry(0.25, 0.02, 8, 16, Math.PI),
+      new THREE.MeshPhongMaterial({color: 0x8B4513})
+    );
+    bow.rotation.z = Math.PI / 2;
+    bowGroup.add(bow);
+    const arrow = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.01, 0.01, 0.6, 4),
+      new THREE.MeshPhongMaterial({color: 0x8B4513})
+    );
+    arrow.rotation.z = Math.PI / 2;
+    bowGroup.add(arrow);
+    // Arrow tip
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 4), new THREE.MeshPhongMaterial({color: 0x888888}));
+    tip.position.x = 0.32;
+    tip.rotation.z = -Math.PI / 2;
+    bowGroup.add(tip);
+    rabbitGroup.add(bowGroup);
+    streakItems.bow = bowGroup;
+  }
+
+  if (streak >= 70) { // Jetpack
+    const jpGroup = new THREE.Group();
+    jpGroup.position.set(0, 1.0, -0.55);
+    for (const side of [-1, 1]) {
+      const tank = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.1, 0.4, 8),
+        new THREE.MeshPhongMaterial({color: 0x666666, shininess: 80})
+      );
+      tank.position.set(side * 0.15, 0, 0);
+      jpGroup.add(tank);
+      // Nozzle
+      const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.1, 8), new THREE.MeshPhongMaterial({color: 0x444444}));
+      nozzle.position.set(side * 0.15, -0.25, 0);
+      nozzle.rotation.x = Math.PI;
+      jpGroup.add(nozzle);
+    }
+    rabbitGroup.add(jpGroup);
+    streakItems.jetpack = jpGroup;
+  }
+}
+
+function buildFox() {
+  const fox = new THREE.Group();
+  const orange = new THREE.MeshPhongMaterial({color: 0xff6600});
+  const white = new THREE.MeshPhongMaterial({color: 0xfff8ee});
+  const dark = new THREE.MeshPhongMaterial({color: 0x222222});
+
+  // Body
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), orange);
+  body.scale.set(1, 0.8, 1.3);
+  body.position.y = 0.5;
+  body.castShadow = true;
+  fox.add(body);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), orange);
+  head.position.set(0, 0.7, 0.3);
+  fox.add(head);
+
+  // Snout
+  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 8), white);
+  snout.position.set(0, 0.65, 0.5);
+  snout.rotation.x = Math.PI / 2;
+  fox.add(snout);
+
+  // Ears
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.15, 6), orange);
+    ear.position.set(side * 0.12, 0.9, 0.25);
+    fox.add(ear);
+  }
+
+  // Eyes
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), dark);
+    eye.position.set(side * 0.1, 0.75, 0.45);
+    fox.add(eye);
+  }
+
+  // Tail
+  const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.3, 6, 6), orange);
+  tail.position.set(0, 0.5, -0.35);
+  tail.rotation.x = -0.5;
+  fox.add(tail);
+  const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), white);
+  tailTip.position.set(0, 0.4, -0.5);
+  fox.add(tailTip);
+
+  // Legs
+  for (const side of [-1, 1]) {
+    for (const fwd of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6), orange);
+      leg.position.set(side * 0.15, 0.2, fwd * 0.2);
+      fox.add(leg);
+    }
+  }
+
+  fox.scale.setScalar(0.7);
+  return fox;
+}
+
+function buildCarrot() {
+  const carrotGroup = new THREE.Group();
+
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.2, 0.9, 12),
+    createGlowMaterial(0xff8c00, 0.3)
+  );
+  cone.rotation.x = Math.PI;
+  carrotGroup.add(cone);
+
+  for (let i = 0; i < 4; i++) {
+    const leaf = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.04, 0.35, 6, 6),
+      new THREE.MeshPhongMaterial({ color: 0x228b22, emissive: 0x114411, emissiveIntensity: 0.2 })
+    );
+    leaf.position.y = 0.45;
+    leaf.rotation.z = (i / 4) * Math.PI * 2;
+    leaf.rotation.x = 0.35;
+    carrotGroup.add(leaf);
+  }
+
+  carrotGroup.position.set(0, 2, carrotTargetZ);
+  carrotGroup.name = 'carrot';
+  scene.add(carrotGroup);
+  carrotMesh = carrotGroup;
+}
+
+// ===================== DECORATIONS =====================
+function spawnDecoration(z) {
+  const envIdx = getEnvIndex(streak);
+  const types = getDecorationTypes(envIdx);
+
+  for (const side of [-1, 1]) {
+    const xBase = side * (3.5 + Math.random() * 8);
+    const count = 1 + Math.floor(Math.random() * 2);
+
+    for (let j = 0; j < count; j++) {
+      const x = xBase + (Math.random() - 0.5) * 3;
+      const zz = z + (Math.random() - 0.5) * 3;
+      const obj = createDecoration(types, x, zz, envIdx);
+      if (obj) {
+        scene.add(obj);
+        decorations.push(obj);
+      }
+    }
+  }
+}
+
+function getDecorationTypes(envIdx) {
+  switch (envIdx) {
+    case 0: return ['tree', 'flower', 'bush', 'rock', 'butterfly', 'bee'];
+    case 1: return ['tallTree', 'mushroom', 'fallenLog', 'bush', 'firefly'];
+    case 2: return ['pine', 'snowman', 'frozenLake', 'icicleTree'];
+    case 3: return ['coral', 'seaweed', 'jellyfish', 'fish'];
+    case 4: return ['asteroid', 'planet', 'shootingStar', 'crystal'];
+    case 5: return ['crystal', 'glowTree', 'prism', 'rainbowArc', 'glowOrb'];
+    default: return ['tree', 'flower'];
+  }
+}
+
+function createDecoration(types, x, z, envIdx) {
+  const type = types[Math.floor(Math.random() * types.length)];
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  g.userData.type = type;
+  g.userData.time = Math.random() * 100;
+
+  switch (type) {
+    case 'tree': {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 1.6, 8), new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+      trunk.position.y = 0.8; trunk.castShadow = true; g.add(trunk);
+      const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 10), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
+      leaves.position.y = 1.9; leaves.castShadow = true; g.add(leaves);
+      // Extra leaf clusters
+      for (let i = 0; i < 3; i++) {
+        const cl = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), new THREE.MeshPhongMaterial({ color: 0x1a7a1a }));
+        cl.position.set(Math.cos(i*2.1)*0.5, 1.6 + Math.random()*0.5, Math.sin(i*2.1)*0.5);
+        g.add(cl);
+      }
+      break;
+    }
+    case 'tallTree': {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.8, 8), new THREE.MeshPhongMaterial({ color: 0x5c3317 }));
+      trunk.position.y = 1.4; trunk.castShadow = true; g.add(trunk);
+      for (let i = 0; i < 3; i++) {
+        const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.75 - i*0.15, 10, 8), new THREE.MeshPhongMaterial({ color: 0x1a6b1a }));
+        leaves.position.y = 2.4 + i*0.6; leaves.castShadow = true; g.add(leaves);
+      }
+      break;
+    }
+    case 'flower': {
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.45, 6), new THREE.MeshPhongMaterial({ color: 0x228822 }));
+      stem.position.y = 0.22; g.add(stem);
+      const colors = [0xff4444, 0xffaa00, 0xff66cc, 0xaa44ff, 0x44aaff];
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      // Petals
+      for (let p = 0; p < 5; p++) {
+        const petal = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshPhongMaterial({ color: col }));
+        petal.position.set(Math.cos(p*1.26)*0.08, 0.48, Math.sin(p*1.26)*0.08);
+        petal.scale.set(1, 0.6, 1);
+        g.add(petal);
+      }
+      const center = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshPhongMaterial({ color: 0xffff44 }));
+      center.position.y = 0.48; g.add(center);
+      break;
+    }
+    case 'butterfly': {
+      const bfGroup = new THREE.Group();
+      bfGroup.position.y = 1 + Math.random() * 1.5;
+      const bodyMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.08, 4, 4), new THREE.MeshPhongMaterial({color: 0x222222}));
+      bfGroup.add(bodyMesh);
+      const wingColors = [0xff44aa, 0x44aaff, 0xffaa44, 0xaa44ff];
+      const wc = wingColors[Math.floor(Math.random()*wingColors.length)];
+      for (const side of [-1, 1]) {
+        const wing = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.15, 0.1),
+          new THREE.MeshPhongMaterial({color: wc, side: THREE.DoubleSide, transparent: true, opacity: 0.8})
+        );
+        wing.position.set(side * 0.08, 0, 0);
+        wing.rotation.y = side * 0.5;
+        bfGroup.add(wing);
+      }
+      g.add(bfGroup);
+      g.userData.animated = 'butterfly';
+      break;
+    }
+    case 'bee': {
+      const beeGroup = new THREE.Group();
+      beeGroup.position.y = 0.8 + Math.random();
+      const beeBody = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshPhongMaterial({color: 0xffcc00}));
+      beeGroup.add(beeBody);
+      // Stripes
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.02, 8), new THREE.MeshPhongMaterial({color: 0x222222}));
+      beeGroup.add(stripe);
+      // Wings
+      for (const side of [-1, 1]) {
+        const bWing = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.04), new THREE.MeshPhongMaterial({color: 0xffffff, transparent: true, opacity: 0.5, side: THREE.DoubleSide}));
+        bWing.position.set(side * 0.05, 0.04, 0);
+        beeGroup.add(bWing);
+      }
+      g.add(beeGroup);
+      g.userData.animated = 'bee';
+      break;
+    }
+    case 'bush': {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), new THREE.MeshPhongMaterial({ color: 0x2d7a2d }));
+      b.position.y = 0.38; b.scale.set(1, 0.7, 1); b.castShadow = true; g.add(b);
+      break;
+    }
+    case 'rock': {
+      const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + Math.random()*0.3, 1), new THREE.MeshPhongMaterial({ color: 0x777777 }));
+      r.position.y = 0.2; r.rotation.set(Math.random(), Math.random(), Math.random()); r.castShadow = true; g.add(r);
+      break;
+    }
+    case 'mushroom': {
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.3, 8), new THREE.MeshPhongMaterial({ color: 0xf5deb3 }));
+      stem.position.y = 0.15; g.add(stem);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshPhongMaterial({ color: 0xcc3333 }));
+      cap.position.y = 0.35; cap.scale.y = 0.5; g.add(cap);
+      // White dots
+      for (let i = 0; i < 5; i++) {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), new THREE.MeshPhongMaterial({color: 0xffffff}));
+        const a = Math.random() * Math.PI * 2;
+        dot.position.set(Math.cos(a)*0.15, 0.38, Math.sin(a)*0.15);
+        g.add(dot);
+      }
+      break;
+    }
+    case 'fallenLog': {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 2, 8), new THREE.MeshPhongMaterial({color: 0x6B4226}));
+      log.position.y = 0.15; log.rotation.z = Math.PI / 2; log.castShadow = true; g.add(log);
+      // Moss
+      const moss = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 4), new THREE.MeshPhongMaterial({color: 0x2a5a2a}));
+      moss.position.set(0.3, 0.2, 0); moss.scale.y = 0.4; g.add(moss);
+      break;
+    }
+    case 'firefly': {
+      const ff = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), createGlowMaterial(0xffff66, 0.8));
+      ff.position.y = 1 + Math.random() * 2;
+      g.add(ff);
+      g.userData.animated = 'firefly';
+      break;
+    }
+    case 'pine': {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 1.3, 8), new THREE.MeshPhongMaterial({ color: 0x5c3317 }));
+      trunk.position.y = 0.65; g.add(trunk);
+      for (let i = 0; i < 3; i++) {
+        const tier = new THREE.Mesh(new THREE.ConeGeometry(0.85 - i*0.22, 1.1, 10), new THREE.MeshPhongMaterial({ color: 0x1a5028 }));
+        tier.position.y = 1.5 + i*0.65; tier.castShadow = true; g.add(tier);
+        const snow = new THREE.Mesh(new THREE.ConeGeometry(0.55 - i*0.14, 0.22, 10), new THREE.MeshPhongMaterial({ color: 0xeeeeff }));
+        snow.position.y = 2.05 + i*0.65; g.add(snow);
+      }
+      break;
+    }
+    case 'snowman': {
+      const sizes = [0.38, 0.28, 0.2];
+      let y = 0;
+      sizes.forEach(s => { y += s; const ball = new THREE.Mesh(new THREE.SphereGeometry(s, 12, 10), new THREE.MeshPhongMaterial({ color: 0xf0f0ff })); ball.position.y = y; g.add(ball); y += s*0.65; });
+      // Eyes
+      for (const side of [-1,1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), new THREE.MeshPhongMaterial({color: 0x111111})); e.position.set(side*0.08, y-0.25, 0.16); g.add(e); }
+      // Nose
+      const carrotNose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), new THREE.MeshPhongMaterial({color: 0xff8800}));
+      carrotNose.position.set(0, y-0.3, 0.2); carrotNose.rotation.x = Math.PI/2; g.add(carrotNose);
+      break;
+    }
+    case 'frozenLake': {
+      const lake = new THREE.Mesh(new THREE.CircleGeometry(1.5 + Math.random(), 16), new THREE.MeshPhongMaterial({color: 0x88ccee, transparent: true, opacity: 0.6, shininess: 200}));
+      lake.rotation.x = -Math.PI / 2; lake.position.y = 0.02; g.add(lake);
+      break;
+    }
+    case 'icicleTree': {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1, 8), new THREE.MeshPhongMaterial({ color: 0x5c3317 }));
+      trunk.position.y = 0.5; g.add(trunk);
+      const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.6, 10, 8), new THREE.MeshPhongMaterial({ color: 0x1a5028 }));
+      leaves.position.y = 1.3; g.add(leaves);
+      // Icicles
+      for (let i = 0; i < 6; i++) {
+        const icicle = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.2 + Math.random()*0.2, 6), new THREE.MeshPhongMaterial({color: 0xbbddff, transparent: true, opacity: 0.7, shininess: 200}));
+        const a = i / 6 * Math.PI * 2;
+        icicle.position.set(Math.cos(a)*0.45, 0.9, Math.sin(a)*0.45);
+        icicle.rotation.x = Math.PI;
+        g.add(icicle);
+      }
+      break;
+    }
+    case 'coral': {
+      const colors = [0xff6666, 0xff9944, 0xffcc66, 0xcc66ff];
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      for (let i = 0; i < 4 + Math.floor(Math.random()*3); i++) {
+        const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.09, 0.5+Math.random()*0.5, 6), new THREE.MeshPhongMaterial({ color: col }));
+        branch.position.set((Math.random()-0.5)*0.35, 0.3, (Math.random()-0.5)*0.35);
+        branch.rotation.set((Math.random()-0.5)*0.5, 0, (Math.random()-0.5)*0.5);
+        g.add(branch);
+      }
+      break;
+    }
+    case 'seaweed': {
+      const col = [0x22aa44, 0x33bb55, 0x44cc33][Math.floor(Math.random()*3)];
+      for (let i = 0; i < 3 + Math.floor(Math.random()*3); i++) {
+        const s = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.7+Math.random()*0.4, 6, 8), new THREE.MeshPhongMaterial({ color: col }));
+        s.position.set((Math.random()-0.5)*0.35, 0.45, (Math.random()-0.5)*0.25);
+        s.rotation.z = (Math.random()-0.5)*0.3;
+        g.add(s);
+      }
+      g.userData.animated = 'seaweed';
+      break;
+    }
+    case 'jellyfish': {
+      const jf = new THREE.Group();
+      jf.position.y = 2 + Math.random() * 3;
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshPhongMaterial({color: 0xff88cc, transparent: true, opacity: 0.6}));
+      jf.add(bell);
+      for (let i = 0; i < 6; i++) {
+        const tent = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.005, 0.5+Math.random()*0.3, 4), new THREE.MeshPhongMaterial({color: 0xff66aa, transparent: true, opacity: 0.4}));
+        tent.position.set(Math.cos(i)*0.12, -0.3, Math.sin(i)*0.12);
+        jf.add(tent);
+      }
+      g.add(jf);
+      g.userData.animated = 'jellyfish';
+      break;
+    }
+    case 'fish': {
+      const fishGroup = new THREE.Group();
+      fishGroup.position.y = 1 + Math.random() * 3;
+      const fishColors = [0xff4444, 0x44aaff, 0xffaa44, 0x44ff88];
+      const fc = fishColors[Math.floor(Math.random()*fishColors.length)];
+      const fishBody = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshPhongMaterial({color: fc}));
+      fishBody.scale.set(1, 0.6, 1.8);
+      fishGroup.add(fishBody);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.12, 4), new THREE.MeshPhongMaterial({color: fc}));
+      tail.position.z = -0.18; tail.rotation.x = Math.PI/2;
+      fishGroup.add(tail);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), new THREE.MeshBasicMaterial({color: 0x000000}));
+      eye.position.set(0.05, 0.02, 0.1);
+      fishGroup.add(eye);
+      g.add(fishGroup);
+      g.userData.animated = 'fish';
+      break;
+    }
+    case 'asteroid': {
+      const a = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5+Math.random()*0.5, 1), new THREE.MeshPhongMaterial({ color: 0x555566 }));
+      a.position.y = 1+Math.random()*4; a.rotation.set(Math.random()*3, Math.random()*3, 0); g.add(a);
+      break;
+    }
+    case 'planet': {
+      const pGroup = new THREE.Group();
+      pGroup.position.y = 3 + Math.random() * 5;
+      const planetColors = [0xcc4444, 0x44cc88, 0xcc8844, 0x4488cc];
+      const pc = planetColors[Math.floor(Math.random()*planetColors.length)];
+      const planet = new THREE.Mesh(new THREE.SphereGeometry(0.5+Math.random()*0.5, 16, 12), new THREE.MeshPhongMaterial({color: pc}));
+      pGroup.add(planet);
+      // Ring
+      if (Math.random() > 0.4) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.05, 8, 32), new THREE.MeshPhongMaterial({color: 0xddddaa, transparent: true, opacity: 0.6}));
+        ring.rotation.x = Math.PI / 3;
+        pGroup.add(ring);
+      }
+      g.add(pGroup);
+      g.userData.animated = 'planet';
+      break;
+    }
+    case 'shootingStar': {
+      const ss = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), createGlowMaterial(0xffffaa, 0.8));
+      ss.position.y = 5 + Math.random() * 5;
+      g.add(ss);
+      // Trail
+      for (let i = 1; i < 6; i++) {
+        const t = new THREE.Mesh(new THREE.SphereGeometry(0.04/i, 4, 4), createGlowMaterial(0xffffaa, 0.3));
+        t.position.set(i*0.15, ss.position.y + i*0.1, i*0.1);
+        g.add(t);
+      }
+      g.userData.animated = 'shootingStar';
+      break;
+    }
+    case 'crystal': {
+      const colors = [0xff44ff, 0x44ffff, 0xffff44, 0x44ff44, 0xff4444, 0x4444ff];
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      const c = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.3+Math.random()*0.3, 0),
+        createGlowMaterial(col, 0.4)
+      );
+      c.position.y = 0.5+Math.random(); c.scale.y = 1.5+Math.random(); g.add(c);
+      break;
+    }
+    case 'glowTree': {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8), new THREE.MeshPhongMaterial({ color: 0x663399 }));
+      trunk.position.y = 0.8; g.add(trunk);
+      const cols = [0xff66ff, 0x66ffff, 0xffff66];
+      const col = cols[Math.floor(Math.random()*cols.length)];
+      const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(0.65, 1), createGlowMaterial(col, 0.5));
+      leaves.position.y = 1.9; g.add(leaves);
+      break;
+    }
+    case 'prism': {
+      const p = new THREE.Mesh(
+        new THREE.CylinderGeometry(0, 0.45, 1.3, 3),
+        new THREE.MeshPhongMaterial({ color: 0xffffff, emissive: 0x886688, emissiveIntensity: 0.4, shininess: 200, transparent: true, opacity: 0.6 })
+      );
+      p.position.y = 0.65; g.add(p);
+      break;
+    }
+    case 'rainbowArc': {
+      const colors = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0x8800ff];
+      colors.forEach((col, i) => {
+        const arc = new THREE.Mesh(
+          new THREE.TorusGeometry(2 + i*0.15, 0.06, 8, 32, Math.PI),
+          createGlowMaterial(col, 0.4)
+        );
+        arc.position.y = 2; arc.rotation.z = Math.PI; g.add(arc);
+      });
+      break;
+    }
+    case 'glowOrb': {
+      const orbColors = [0xff44ff, 0x44ffff, 0xffff44, 0xff4444, 0x44ff44];
+      const col = orbColors[Math.floor(Math.random()*orbColors.length)];
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.2+Math.random()*0.2, 12, 10), createGlowMaterial(col, 0.6));
+      orb.position.y = 0.5 + Math.random() * 2;
+      g.add(orb);
+      g.userData.animated = 'glowOrb';
+      break;
+    }
+  }
+
+  return g;
+}
+
+// ===================== PARTICLES =====================
+function spawnParticles(position, color, count = 15, options = {}) {
+  const { speed = 6, life = 1, size = null, gravity = true } = options;
+  for (let i = 0; i < count; i++) {
+    const s = size || (0.04 + Math.random() * 0.08);
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(s, 4, 4),
+      new THREE.MeshBasicMaterial({ color, transparent: true })
+    );
+    p.position.copy(position);
+    p.userData.vel = new THREE.Vector3(
+      (Math.random()-0.5)*speed,
+      Math.random()*speed*0.8 + speed*0.3,
+      (Math.random()-0.5)*speed
+    );
+    p.userData.life = life;
+    p.userData.maxLife = life;
+    p.userData.gravity = gravity;
+    scene.add(p);
+    particles.push(p);
+  }
+}
+
+function spawnTrailParticle(position, color, options = {}) {
+  const { size = 0.06, life = 0.8 } = options;
+  const p = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 4, 4),
+    new THREE.MeshBasicMaterial({ color, transparent: true })
+  );
+  p.position.copy(position);
+  p.position.x += (Math.random()-0.5)*0.3;
+  p.position.y += Math.random()*0.3;
+  p.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.5, 0.5);
+  p.userData.life = life;
+  p.userData.maxLife = life;
+  p.userData.gravity = false;
+  scene.add(p);
+  trailParticles.push(p);
+}
+
+let envParticles = [];
+function updateEnvParticles(dt, envIdx, time) {
+  // Spawn per-biome particles
+  if (envIdx === 0) { // Meadow dust motes
+    if (Math.random() < 0.1) {
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), new THREE.MeshBasicMaterial({color: 0xffffcc, transparent: true, opacity: 0.5}));
+      p.position.set(rabbitGroup.position.x + (Math.random()-0.5)*20, 0.5+Math.random()*3, rabbitGroup.position.z + (Math.random()-0.5)*30-10);
+      p.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.3, 0.2, 0);
+      p.userData.life = 4;
+      scene.add(p); envParticles.push(p);
+    }
+  } else if (envIdx === 2) { // Snow
+    if (Math.random() < 0.4) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      s.position.set(rabbitGroup.position.x + (Math.random()-0.5)*30, 12, rabbitGroup.position.z + (Math.random()-0.5)*40-15);
+      s.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.5, -1.5-Math.random(), (Math.random()-0.5)*0.3);
+      s.userData.life = 8;
+      scene.add(s); envParticles.push(s);
+    }
+  } else if (envIdx === 3) { // Bubbles
+    if (Math.random() < 0.2) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.06+Math.random()*0.08, 8, 8), new THREE.MeshPhongMaterial({color: 0x88ddff, transparent: true, opacity: 0.35, shininess: 100}));
+      b.position.set(rabbitGroup.position.x + (Math.random()-0.5)*20, 0.5, rabbitGroup.position.z + (Math.random()-0.5)*30-10);
+      b.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.3, 1+Math.random(), 0);
+      b.userData.life = 5;
+      scene.add(b); envParticles.push(b);
+    }
+  } else if (envIdx === 4) { // Star dust
+    if (envParticles.length < 100 && Math.random() < 0.25) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      s.position.set(rabbitGroup.position.x + (Math.random()-0.5)*60, 3+Math.random()*15, rabbitGroup.position.z + (Math.random()-0.5)*60-20);
+      s.userData.vel = new THREE.Vector3(0, 0, 0);
+      s.userData.life = 3+Math.random()*3;
+      scene.add(s); envParticles.push(s);
+    }
+  } else if (envIdx === 5) { // Rainbow sparkles
+    if (Math.random() < 0.2) {
+      const colors = [0xff0000,0xff8800,0xffff00,0x00ff00,0x0088ff,0x8800ff];
+      const c = colors[Math.floor(Math.random()*colors.length)];
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), createGlowMaterial(c, 0.5));
+      sp.position.set(rabbitGroup.position.x + (Math.random()-0.5)*25, 1+Math.random()*4, rabbitGroup.position.z + (Math.random()-0.5)*30-10);
+      sp.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.5, 0.3+Math.random()*0.5, 0);
+      sp.userData.life = 3;
+      scene.add(sp); envParticles.push(sp);
+    }
+  }
+
+  // Update
+  for (let i = envParticles.length - 1; i >= 0; i--) {
+    const p = envParticles[i];
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) { scene.remove(p); envParticles.splice(i, 1); continue; }
+    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+    if (envIdx === 4) { p.material.opacity = 0.3 + Math.sin(p.userData.life*5)*0.7; p.material.transparent = true; }
+  }
+}
+
+// Dust kicked up by feet
+function spawnFootDust() {
+  if (!rabbitGroup) return;
+  const pos = rabbitGroup.position.clone();
+  pos.y = 0.1;
+  const envIdx = getEnvIndex(streak);
+  const colors = [0xc4a35a, 0x8b6914, 0xddddee, 0x44aaaa, 0x555566, 0xaa66cc];
+  for (let i = 0; i < 3; i++) {
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), new THREE.MeshBasicMaterial({color: colors[envIdx] || 0xc4a35a, transparent: true}));
+    p.position.copy(pos);
+    p.position.x += (Math.random()-0.5)*0.3;
+    p.position.z += (Math.random()-0.5)*0.2;
+    p.userData.vel = new THREE.Vector3((Math.random()-0.5)*1, Math.random()*1.5, Math.random()*0.5);
+    p.userData.life = 0.5;
+    p.userData.maxLife = 0.5;
+    p.userData.gravity = true;
+    scene.add(p);
+    particles.push(p);
+  }
+}
+
+// ===================== ENVIRONMENT UPDATES =====================
+function lerpColor(a, b, t) {
+  const ca = new THREE.Color(a), cb = new THREE.Color(b);
+  ca.lerp(cb, t); return ca;
+}
+
+function updateEnvironment(dt, time) {
+  const targetIdx = getEnvIndex(streak);
+
+  if (targetIdx !== currentEnvIndex) {
+    envTransition += dt * 0.5;
+    if (envTransition >= 1) {
+      currentEnvIndex = targetIdx;
+      envTransition = 0;
+      const envNameEl = document.getElementById('envName');
+      envNameEl.textContent = ENVS[targetIdx].name;
+      envNameEl.classList.add('show');
+      setTimeout(() => envNameEl.classList.remove('show'), 2500);
+      startAmbient(targetIdx);
+    }
+  }
+
+  const fromEnv = ENVS[currentEnvIndex];
+  const toEnv = ENVS[targetIdx];
+  const t = envTransition;
+
+  const skyCol = lerpColor(fromEnv.sky, toEnv.sky, t);
+  const fogCol = lerpColor(fromEnv.fog, toEnv.fog, t);
+  const groundCol = lerpColor(fromEnv.ground, toEnv.ground, t);
+  const pathCol = lerpColor(fromEnv.pathColor, toEnv.pathColor, t);
+
+  scene.background = skyCol;
+  scene.fog.color.copy(fogCol);
+
+  const ground = scene.getObjectByName('ground');
+  if (ground) ground.material.color.copy(groundCol);
+
+  pathSegments.forEach(seg => {
+    if (seg.name === 'pathSeg') {
+      seg.material.color.copy(pathCol);
+      // Speed zone glow
+      if (MathEngine.isSpeedZone) {
+        seg.material.emissive = new THREE.Color(0x0066ff);
+        seg.material.emissiveIntensity = 0.2 + Math.sin(time*5)*0.1;
+      } else {
+        if (seg.material.emissive) seg.material.emissiveIntensity = 0;
+      }
+    }
+  });
+
+  const amb = scene.getObjectByName('ambient');
+  if (amb) amb.color.copy(lerpColor(fromEnv.ambient, toEnv.ambient, t));
+
+  const sun = scene.getObjectByName('sun');
+  if (sun) {
+    sun.color.copy(lerpColor(fromEnv.sun, toEnv.sun, t));
+    // Dynamic light direction per biome
+    const sunAngle = [0, 0.8, -0.3, 0, 0.5, 0][targetIdx] || 0;
+    sun.position.x = 5 + Math.sin(sunAngle) * 5;
+    sun.intensity = [0.9, 0.7, 0.6, 0.4, 0.3, 0.8][targetIdx] || 0.8;
+  }
+
+  const hemi = scene.getObjectByName('hemi');
+  if (hemi) {
+    hemi.color.copy(lerpColor(fromEnv.sky, toEnv.sky, t));
+    hemi.groundColor.copy(lerpColor(fromEnv.ground, toEnv.ground, t));
+  }
+
+  updateEnvParticles(dt, targetIdx, time);
+}
+
+// ===================== ANIMATION =====================
+function animateDecorations(time) {
+  decorations.forEach(d => {
+    const t = d.userData.time + time;
+    switch(d.userData.animated) {
+      case 'butterfly': {
+        d.position.y += Math.sin(t*3)*0.003;
+        d.position.x += Math.sin(t*1.5)*0.005;
+        const wings = d.children[0]?.children;
+        if (wings) wings.forEach((w, i) => { if (i > 0 && w.rotation) w.rotation.y = Math.sin(t*15) * (i === 1 ? 1 : -1) * 0.8; });
+        break;
+      }
+      case 'bee': {
+        d.position.y += Math.sin(t*5)*0.002;
+        d.position.x += Math.sin(t*2)*0.004;
+        break;
+      }
+      case 'firefly': {
+        d.children.forEach(c => {
+          if (c.material && c.material.emissiveIntensity !== undefined) {
+            c.material.emissiveIntensity = 0.3 + Math.sin(t*3)*0.5;
+          }
+        });
+        d.position.y += Math.sin(t*2)*0.003;
+        break;
+      }
+      case 'seaweed': {
+        d.children.forEach((c, i) => { c.rotation.z = Math.sin(t*1.5 + i*0.5)*0.3; });
+        break;
+      }
+      case 'jellyfish': {
+        d.children[0].position.y += Math.sin(t*1.2)*0.005;
+        break;
+      }
+      case 'fish': {
+        d.position.x += Math.sin(t*2)*0.01;
+        d.position.z += Math.cos(t*1.5)*0.01;
+        break;
+      }
+      case 'planet': {
+        d.children[0]?.children.forEach(c => { c.rotation.y = t*0.3; });
+        break;
+      }
+      case 'shootingStar': {
+        d.position.x += Math.sin(t*0.5)*0.02;
+        break;
+      }
+      case 'glowOrb': {
+        d.position.y += Math.sin(t*2)*0.003;
+        d.children.forEach(c => {
+          if (c.material && c.material.emissiveIntensity !== undefined) c.material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.3;
+        });
+        break;
+      }
+    }
+  });
+}
+
+let cameraShake = 0;
+
+function animateRabbit(dt, time) {
+  if (!rabbitGroup) return;
+
+  let speed = 8;
+  if (MathEngine.isSpeedZone) speed = 12;
+  if (streak >= 55) speed = 10; // hoverboard faster
+
+  const onHoverboard = streak >= 55;
+
+  if (rabbitState === 'running') {
+    const runCycle = time * 8;
+
+    if (onHoverboard) {
+      // On hoverboard: no leg animation, slight bob
+      rabbitParts.legL.rotation.x = 0;
+      rabbitParts.legR.rotation.x = 0;
+      rabbitParts.armL.rotation.x = -0.2;
+      rabbitParts.armR.rotation.x = -0.2;
+      rabbitParts.body.position.y = 1.0 + Math.sin(time*2)*0.05;
+      rabbitParts.head.position.y = 1.85 + Math.sin(time*2)*0.05;
+      rabbitGroup.position.y = 0.3 + Math.sin(time*3)*0.08; // float
+    } else {
+      rabbitParts.legL.rotation.x = Math.sin(runCycle) * 0.6;
+      rabbitParts.legR.rotation.x = Math.sin(runCycle + Math.PI) * 0.6;
+      rabbitParts.armL.rotation.x = Math.sin(runCycle + Math.PI) * 0.4;
+      rabbitParts.armR.rotation.x = Math.sin(runCycle) * 0.4;
+      rabbitParts.body.position.y = 1.0 + Math.abs(Math.sin(runCycle)) * 0.08;
+      rabbitParts.head.position.y = 1.85 + Math.abs(Math.sin(runCycle)) * 0.08;
+      rabbitGroup.position.y = streak >= 90 ? 0.3 : 0; // genie float
+
+      // Footstep sounds & dust
+      if (Math.sin(runCycle) > 0.9 && time - lastFootstepTime > 0.2) {
+        lastFootstepTime = time;
+        AudioEngine.footstep(getEnvIndex(streak));
+        spawnFootDust();
+      }
+    }
+
+    // Ears flap
+    rabbitParts.earL.rotation.x = Math.sin(runCycle * 0.5) * 0.15;
+    rabbitParts.earR.rotation.x = Math.sin(runCycle * 0.5 + 0.5) * 0.15;
+
+    // Whisker sway
+    rabbitParts.whiskers.forEach(w => {
+      w.mesh.rotation.z = w.side * (0.4 + w.idx * 0.2) + Math.sin(time * 3 + w.idx) * 0.15;
+    });
+
+    // Tail wiggle
+    rabbitParts.tail.rotation.y = Math.sin(runCycle * 2) * 0.2;
+
+    // Wings flap
+    if (streak >= 45 && streakItems.wing1) {
+      streakItems.wing1.rotation.z = Math.sin(time * 6) * 0.4;
+      streakItems[`wing${-1}`].rotation.z = -Math.sin(time * 6) * 0.4;
+    }
+
+  } else if (rabbitState === 'jumping') {
+    stateTimer -= dt;
+    const jumpProgress = 1 - (stateTimer / 0.8);
+    const jumpHeight = Math.sin(jumpProgress * Math.PI) * 2.5;
+    rabbitGroup.position.y = jumpHeight;
+    rabbitParts.legL.rotation.x = -0.8;
+    rabbitParts.legR.rotation.x = -0.8;
+    rabbitParts.armL.rotation.x = -1.2;
+    rabbitParts.armR.rotation.x = -1.2;
+    rabbitParts.earL.rotation.x = -0.5;
+    rabbitParts.earR.rotation.x = -0.5;
+
+    if (stateTimer <= 0) { rabbitState = 'running'; rabbitGroup.position.y = 0; }
+
+  } else if (rabbitState === 'stumbling') {
+    stateTimer -= dt;
+    const stumbleProgress = 1 - (stateTimer / 0.8);
+    if (stumbleProgress < 0.4) {
+      const st = stumbleProgress / 0.4;
+      rabbitGroup.rotation.x = st * 0.5;
+      rabbitGroup.position.y = -st * 0.2;
+    } else {
+      const st = (stumbleProgress - 0.4) / 0.6;
+      rabbitGroup.rotation.x = 0.5 * (1 - st);
+      rabbitGroup.position.y = -0.2 * (1 - st);
+    }
+    rabbitParts.armL.rotation.x = Math.sin(time * 15) * 1.0;
+    rabbitParts.armR.rotation.x = Math.sin(time * 15 + 2) * 1.0;
+    rabbitParts.armL.rotation.z = -0.5;
+    rabbitParts.armR.rotation.z = 0.5;
+
+    if (stateTimer <= 0) {
+      rabbitState = 'running'; rabbitGroup.rotation.x = 0; rabbitGroup.position.y = 0;
+      rabbitParts.armL.rotation.z = 0; rabbitParts.armR.rotation.z = 0;
+    }
+  }
+
+  // Streak trails
+  if (rabbitGroup) {
+    const pos = rabbitGroup.position.clone();
+    pos.y += 0.5;
+    pos.z += 0.3;
+
+    if (streak >= 15 && streak < 25) {
+      // Fire trail
+      if (Math.random() < 0.5) spawnTrailParticle(pos, Math.random()<0.5 ? 0xff4400 : 0xff8800, {size: 0.05, life: 0.5});
+    }
+    if (streak >= 25) {
+      // Rainbow trail
+      const rainbowColors = [0xff0000,0xff8800,0xffff00,0x00ff00,0x0088ff,0x8800ff];
+      if (Math.random() < 0.5) spawnTrailParticle(pos, rainbowColors[Math.floor(Math.random()*rainbowColors.length)], {size: 0.05, life: 0.6});
+    }
+    if (streak >= 65) {
+      // Star trail
+      if (Math.random() < 0.3) {
+        const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), createGlowMaterial(0xffff44, 0.8));
+        star.position.copy(pos);
+        star.position.x += (Math.random()-0.5)*0.4;
+        star.userData.vel = new THREE.Vector3(0, 0.5, 0.3);
+        star.userData.life = 1.0;
+        star.userData.maxLife = 1.0;
+        star.userData.gravity = false;
+        scene.add(star);
+        trailParticles.push(star);
+      }
+    }
+    if (streak >= 70 && streakItems.jetpack) {
+      // Jetpack flames
+      if (Math.random() < 0.6) {
+        for (const side of [-1, 1]) {
+          const flame = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), new THREE.MeshBasicMaterial({color: Math.random()<0.5 ? 0xff4400 : 0xffaa00, transparent: true}));
+          flame.position.copy(rabbitGroup.position);
+          flame.position.x += side * 0.15;
+          flame.position.y += 0.6;
+          flame.position.z += -0.55;
+          flame.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.5, -2-Math.random()*2, (Math.random()-0.5)*0.5);
+          flame.userData.life = 0.3;
+          flame.userData.maxLife = 0.3;
+          flame.userData.gravity = false;
+          scene.add(flame);
+          trailParticles.push(flame);
+        }
+      }
+    }
+    if (streak >= 80) {
+      // Super saiyan particles
+      if (Math.random() < 0.4) {
+        const sp = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), createGlowMaterial(0xffdd00, 0.8));
+        sp.position.copy(rabbitGroup.position);
+        sp.position.x += (Math.random()-0.5)*0.8;
+        sp.position.y += 0.5 + Math.random()*1.5;
+        sp.position.z += (Math.random()-0.5)*0.5;
+        sp.userData.vel = new THREE.Vector3(0, 1+Math.random(), 0);
+        sp.userData.life = 0.6;
+        sp.userData.maxLife = 0.6;
+        sp.userData.gravity = false;
+        scene.add(sp);
+        trailParticles.push(sp);
+      }
+    }
+    if (streak >= 90) {
+      // Genie sparkles
+      if (Math.random() < 0.3) {
+        const sp = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), createGlowMaterial(0xaa44ff, 0.6));
+        sp.position.copy(rabbitGroup.position);
+        sp.position.x += (Math.random()-0.5)*1;
+        sp.position.y += Math.random()*2;
+        sp.position.z += (Math.random()-0.5)*0.8;
+        sp.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.5, 0.5+Math.random(), (Math.random()-0.5)*0.5);
+        sp.userData.life = 0.8;
+        sp.userData.maxLife = 0.8;
+        sp.userData.gravity = false;
+        scene.add(sp);
+        trailParticles.push(sp);
+      }
+    }
+  }
+
+  // Fox companion
+  if (foxCompanion && rabbitGroup) {
+    foxCompanion.position.x = rabbitGroup.position.x + 1.5 + Math.sin(time*2)*0.3;
+    foxCompanion.position.z = rabbitGroup.position.z + 1.5;
+    foxCompanion.position.y = Math.abs(Math.sin(time*8))*0.15;
+    foxCompanion.rotation.y = -0.3;
+  }
+
+  // Move forward
+  runDistance += speed * dt;
+  rabbitGroup.position.z = -runDistance;
+
+  // Camera follow
+  let camShakeX = 0, camShakeY = 0;
+  if (cameraShake > 0) {
+    camShakeX = (Math.random()-0.5)*cameraShake*0.3;
+    camShakeY = (Math.random()-0.5)*cameraShake*0.3;
+    cameraShake -= dt * 3;
+  }
+  if (MathEngine.isSpeedZone) {
+    camShakeX += (Math.random()-0.5)*0.05;
+    camShakeY += (Math.random()-0.5)*0.05;
+  }
+
+  const camTarget = new THREE.Vector3(
+    rabbitGroup.position.x + Math.sin(time*0.5)*0.3 + camShakeX,
+    rabbitGroup.position.y + 4 + camShakeY,
+    rabbitGroup.position.z + 8
+  );
+  camera.position.lerp(camTarget, 3 * dt);
+  camera.lookAt(
+    rabbitGroup.position.x,
+    rabbitGroup.position.y + 1.5,
+    rabbitGroup.position.z - 3
+  );
+
+  // Recycle path segments
+  pathSegments.forEach(seg => { if (seg.position.z > rabbitGroup.position.z + 25) seg.position.z -= 320; });
+
+  // Recycle decorations
+  for (let i = decorations.length - 1; i >= 0; i--) {
+    if (decorations[i].position.z > rabbitGroup.position.z + 30) {
+      scene.remove(decorations[i]); decorations.splice(i, 1);
+    }
+  }
+
+  // Spawn new decorations ahead
+  const farthestZ = decorations.length > 0 ? Math.min(...decorations.map(d => d.position.z)) : rabbitGroup.position.z;
+  if (farthestZ > rabbitGroup.position.z - 120) {
+    for (let z = farthestZ - 4; z > rabbitGroup.position.z - 140; z -= 4) spawnDecoration(z);
+  }
+
+  // Update ground position
+  const ground = scene.getObjectByName('ground');
+  if (ground) ground.position.z = rabbitGroup.position.z - 150;
+
+  // Update sun
+  const sun = scene.getObjectByName('sun');
+  if (sun) {
+    sun.position.z = rabbitGroup.position.z;
+    sun.target.position.set(0, 0, rabbitGroup.position.z);
+    sun.target.updateMatrixWorld();
+  }
+
+  // Carrot animation
+  if (carrotMesh) {
+    carrotMesh.rotation.y += dt * 2;
+    carrotMesh.position.y = 2 + Math.sin(time * 3) * 0.3;
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.userData.life -= dt * 2;
+    if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); continue; }
+    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+    if (p.userData.gravity) p.userData.vel.y -= 9.8 * dt;
+    const lifeRatio = p.userData.life / (p.userData.maxLife || 1);
+    p.scale.setScalar(lifeRatio);
+    p.material.opacity = lifeRatio;
+  }
+
+  // Update trail particles
+  for (let i = trailParticles.length - 1; i >= 0; i--) {
+    const p = trailParticles[i];
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) { scene.remove(p); trailParticles.splice(i, 1); continue; }
+    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+    const lifeRatio = p.userData.life / (p.userData.maxLife || 1);
+    p.scale.setScalar(lifeRatio);
+    if (p.material.opacity !== undefined) { p.material.opacity = lifeRatio; p.material.transparent = true; }
+  }
+
+  animateDecorations(time);
+}
+
+// ===================== GAME LOGIC =====================
+let pendingSimilar = null;
+let teachingTimer = null;
+
+function nextQuestion() {
+  if (pendingSimilar) {
+    currentQuestion = pendingSimilar;
+    pendingSimilar = null;
+  } else {
+    currentQuestion = MathEngine.generate();
+  }
+
+  const qEl = document.getElementById('questionText');
+  const displayText = currentQuestion.wordText || (currentQuestion.text + ' = ?');
+  qEl.textContent = displayText;
+  qEl.className = '';
+  if (currentQuestion.isBoss) {
+    qEl.classList.add('boss');
+    AudioEngine.bossDrum();
+    cameraShake = 1;
+  }
+  if (currentQuestion.isSpeedZone) {
+    qEl.classList.add('speed-zone');
+    if (MathEngine.speedZoneLeft === 2) AudioEngine.speedZone(); // first question of speed zone
+  }
+
+  document.getElementById('hintText').textContent = '💡 ' + currentQuestion.hint;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('answerInput').value = '';
+  document.getElementById('answerInput').focus();
+
+  // Place carrot ahead
+  carrotTargetZ = rabbitGroup.position.z - 30;
+  carrotMesh.position.z = carrotTargetZ;
+  carrotMesh.position.x = 0;
+  carrotMesh.visible = true;
+}
+
+function shakeQuestion() {
+  const q = document.getElementById('questionText');
+  q.classList.remove('shake');
+  void q.offsetWidth;
+  q.classList.add('shake');
+}
+
+function checkAnswer() {
+  const input = document.getElementById('answerInput');
+  const val = parseInt(input.value);
+  if (isNaN(val)) { AudioEngine.emptySubmit(); shakeQuestion(); return; }
+
+  const feedback = document.getElementById('feedback');
+
+  if (val === currentQuestion.answer) {
+    // Correct!
+    const result = MathEngine.recordCorrect(currentQuestion);
+    const prevStreak = streak;
+    streak++;
+    totalCorrectThisGame++;
+
+    let carrotsEarned = 1;
+
+    // Combo multiplier
+    if (result.fast) {
+      carrotsEarned *= 2;
+      const combo = document.getElementById('comboDisplay');
+      combo.textContent = 'FAST! 2x 🥕';
+      combo.classList.add('show');
+      AudioEngine.fastAnswer();
+      setTimeout(() => combo.classList.remove('show'), 1500);
+    }
+
+    // Speed zone bonus
+    if (currentQuestion.isSpeedZone) {
+      carrotsEarned *= 3;
+      const combo = document.getElementById('comboDisplay');
+      combo.textContent = 'SPEED ZONE! 3x 🥕';
+      combo.classList.add('show');
+      setTimeout(() => combo.classList.remove('show'), 1500);
+    }
+
+    // Boss bonus
+    if (currentQuestion.isBoss) {
+      carrotsEarned += 5;
+      feedback.textContent = 'BOSS DEFEATED! +5 bonus carrots! 🎖️';
+      feedback.className = 'feedback-correct';
+      cameraShake = 0.5;
+    } else {
+      const messages = ['Awesome! 🎉', 'Great job! ⭐', 'You got it! 🥕', 'Perfect! 💯', 'Amazing! 🌟', 'Super! 🚀'];
+      feedback.textContent = messages[Math.floor(Math.random() * messages.length)];
+      feedback.className = 'feedback-correct';
+    }
+
+    score += carrotsEarned;
+
+    // Update total correct
+    Storage.set('totalCorrect', getTotalCorrect() + 1);
+    Storage.set('totalCarrots', (Storage.get('totalCarrots', 0)) + carrotsEarned);
+
+    // Jump animation
+    rabbitState = 'jumping';
+    stateTimer = 0.8;
+    AudioEngine.squeak();
+
+    // Collect carrot particles
+    spawnParticles(carrotMesh.position.clone(), 0xff8c00, 20, {speed: 5, life: 0.8});
+    // Sparkle trail on carrot
+    for (let i = 0; i < 8; i++) {
+      spawnParticles(carrotMesh.position.clone(), 0xffff44, 3, {speed: 3, life: 0.5, size: 0.03});
+    }
+    carrotMesh.visible = false;
+    AudioEngine.collect();
+
+    // Check biome transition
+    const prevEnvIdx = getEnvIndex(prevStreak);
+    const newEnvIdx = getEnvIndex(streak);
+    if (newEnvIdx !== prevEnvIdx) AudioEngine.milestone();
+
+    // Check streak rewards
+    const reward = STREAK_REWARDS.find(r => r.streak === streak);
+    if (reward) {
+      if (streak === 99) {
+        // VICTORY
+        setTimeout(() => showVictory(), 500);
+      } else {
+        showMilestone(reward);
+        updateStreakItems();
+      }
+    }
+
+    // Check concept unlocks
+    const unlocked = MathEngine.checkUnlocks();
+    if (unlocked) {
+      const opNames = {sub: 'SUBTRACTION', mul: 'MULTIPLICATION', div: 'DIVISION'};
+      setTimeout(() => showConceptUnlock(opNames[unlocked] || unlocked.toUpperCase()), 800);
+    }
+
+    updateHUD();
+    saveProgress();
+
+    setTimeout(() => nextQuestion(), 1200);
+
+  } else {
+    // Wrong
+    MathEngine.recordWrong(currentQuestion);
+    const prevStreak = streak;
+    streak = 0;
+
+    // Remove streak items
+    updateStreakItems();
+
+    rabbitState = 'stumbling';
+    stateTimer = 0.8;
+    AudioEngine.wrong();
+
+    // Show teaching
+    const teaching = MathEngine.getTeaching(currentQuestion);
+    showTeaching(teaching);
+
+    // Prepare similar question
+    pendingSimilar = MathEngine.generateSimilar(currentQuestion);
+
+    input.value = '';
+    updateHUD();
+  }
+}
+
+function showTeaching(text) {
+  const el = document.getElementById('teachingOverlay');
+  document.getElementById('teachingSolution').textContent = text;
+  el.classList.add('show');
+  if (teachingTimer) clearTimeout(teachingTimer);
+  teachingTimer = setTimeout(() => {
+    el.classList.remove('show');
+    document.getElementById('answerInput').focus();
+    setTimeout(() => nextQuestion(), 500);
+  }, 4000);
+}
+
+function showMilestone(reward) {
+  const popup = document.getElementById('milestonePopup');
+  document.getElementById('milestoneEmoji').textContent = reward.emoji;
+  document.getElementById('milestoneText').textContent = reward.name + ' UNLOCKED!';
+  document.getElementById('milestoneSub').textContent = `Streak: ${reward.streak}!`;
+  popup.classList.add('show');
+  AudioEngine.milestone();
+  setTimeout(() => popup.classList.remove('show'), 2500);
+}
+
+function showConceptUnlock(name) {
+  const el = document.getElementById('conceptUnlock');
+  document.getElementById('unlockText').innerHTML = `NEW POWER UNLOCKED!<br>${name}`;
+  el.classList.add('show');
+  AudioEngine.conceptUnlock();
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function showVictory() {
+  gameRunning = false;
+  const el = document.getElementById('victoryScreen');
+  document.getElementById('victoryStats').textContent = `Score: ${score} carrots | ${totalCorrectThisGame} questions answered`;
+  el.classList.add('show');
+  AudioEngine.victory();
+
+  // Fireworks
+  const fw = setInterval(() => {
+    if (!document.getElementById('victoryScreen').classList.contains('show')) { clearInterval(fw); return; }
+    const colors = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44, 0xff44ff, 0x44ffff];
+    for (let i = 0; i < 3; i++) {
+      const pos = new THREE.Vector3(
+        (Math.random()-0.5)*10,
+        3+Math.random()*5,
+        rabbitGroup ? rabbitGroup.position.z - 10 - Math.random()*10 : -20
+      );
+      spawnParticles(pos, colors[Math.floor(Math.random()*colors.length)], 30, {speed: 8, life: 1.5});
+    }
+  }, 500);
+}
+
+function updateHUD() {
+  document.getElementById('scoreDisplay').textContent = `🥕 ${score}`;
+  document.getElementById('streakDisplay').textContent = `🔥 ${streak}`;
+}
+
+function saveProgress() {
+  // Leaderboard
+  const leaderboard = Storage.get('leaderboard', []);
+  const existing = leaderboard.find(e => e.name === playerName);
+  if (existing) {
+    if (score > existing.score) existing.score = score;
+    existing.streak = Math.max(existing.streak || 0, streak);
+  } else if (playerName) {
+    leaderboard.push({ name: playerName, score, streak: streak });
+  }
+  leaderboard.sort((a, b) => b.score - a.score);
+  Storage.set('leaderboard', leaderboard.slice(0, 10));
+
+  // Stats
+  Storage.set('stats', MathEngine.stats);
+}
+
+// ===================== GAME LOOP =====================
+function gameLoop() {
+  if (!gameRunning) return;
+  requestAnimationFrame(gameLoop);
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const time = clock.getElapsedTime();
+
+  animateRabbit(dt, time);
+  updateEnvironment(dt, time);
+
+  renderer.render(scene, camera);
+}
+
+// ===================== MENU SCREENS =====================
+function showPanel(id) { document.getElementById(id).classList.add('show'); populatePanel(id); }
+function hidePanel(id) { document.getElementById(id).classList.remove('show'); }
+
+function populatePanel(id) {
+  switch(id) {
+    case 'gardenPanel': drawGarden(); break;
+    case 'skinsPanel': drawSkins(); break;
+    case 'statsPanel': drawStats(); break;
+    case 'dailyPanel': drawDaily(); break;
+  }
+}
+
+// Garden
+function drawGarden() {
+  const canvas = document.getElementById('gardenCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 600;
+
+  const totalCarrots = Storage.get('totalCarrots', 0);
+  const rows = Math.floor(totalCarrots / 10);
+
+  // Soil background
+  ctx.fillStyle = '#5c3317';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Dirt texture
+  for (let i = 0; i < 200; i++) {
+    ctx.fillStyle = `rgba(${60+Math.random()*40}, ${30+Math.random()*20}, ${10+Math.random()*15}, 0.5)`;
+    ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 3+Math.random()*5, 2+Math.random()*3);
+  }
+
+  // Draw carrot rows
+  const rowHeight = 50;
+  const startY = 40;
+  for (let r = 0; r < Math.min(rows, 10); r++) {
+    const y = startY + r * rowHeight;
+    const carrotsInRow = r < rows - 1 ? 10 : (totalCarrots % 10 || 10);
+    for (let c = 0; c < carrotsInRow; c++) {
+      const x = 40 + c * (canvas.width - 80) / 10;
+      // Green top
+      ctx.fillStyle = '#228b22';
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x-6, y-20); ctx.lineTo(x+6, y-20); ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x-3, y); ctx.lineTo(x-10, y-18); ctx.lineTo(x, y-15); ctx.closePath();
+      ctx.fill();
+      // Orange carrot body
+      ctx.fillStyle = '#ff8c00';
+      ctx.beginPath();
+      ctx.moveTo(x-8, y); ctx.lineTo(x+8, y); ctx.lineTo(x, y+30); ctx.closePath();
+      ctx.fill();
+      // Lines on carrot
+      ctx.strokeStyle = '#cc7000';
+      ctx.lineWidth = 1;
+      for (let l = 0; l < 3; l++) {
+        ctx.beginPath();
+        const ly = y + 5 + l * 8;
+        ctx.moveTo(x-5+l, ly); ctx.lineTo(x+5-l, ly);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Golden carrot statue at 100
+  if (totalCarrots >= 100) {
+    const cx = canvas.width / 2;
+    const cy = canvas.height - 100;
+    ctx.fillStyle = '#FFD700';
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.moveTo(cx-20, cy); ctx.lineTo(cx+20, cy); ctx.lineTo(cx, cy+60); ctx.closePath();
+    ctx.fill();
+    // Crown
+    ctx.beginPath();
+    ctx.moveTo(cx-15, cy-5); ctx.lineTo(cx-25, cy-25); ctx.lineTo(cx-10, cy-15);
+    ctx.lineTo(cx, cy-30); ctx.lineTo(cx+10, cy-15); ctx.lineTo(cx+25, cy-25);
+    ctx.lineTo(cx+15, cy-5); ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GOLDEN CARROT', cx, cy + 80);
+  }
+
+  document.getElementById('gardenInfo').textContent = `Total carrots collected: ${totalCarrots} | Rows planted: ${rows}`;
+}
+
+// Skins
+function drawSkins() {
+  const grid = document.getElementById('skinGrid');
+  grid.innerHTML = '';
+  const totalCorrect = getTotalCorrect();
+  const selected = getSelectedSkin();
+
+  SKINS.forEach(skin => {
+    const card = document.createElement('div');
+    card.className = 'skin-card' + (skin.id === selected ? ' selected' : '') + (totalCorrect < skin.req ? ' locked' : '');
+    const swatch = document.createElement('div');
+    swatch.className = 'skin-swatch';
+    swatch.style.background = '#' + skin.color.toString(16).padStart(6, '0');
+    if (skin.id === 'galaxy') {
+      swatch.style.background = 'linear-gradient(135deg, #4400aa, #0044aa, #aa0044, #4400aa)';
+    }
+    card.appendChild(swatch);
+    const name = document.createElement('div');
+    name.className = 'skin-name';
+    name.textContent = skin.name;
+    card.appendChild(name);
+    const req = document.createElement('div');
+    req.className = 'skin-req';
+    req.textContent = totalCorrect >= skin.req ? 'Unlocked' : `Need ${skin.req} correct`;
+    card.appendChild(req);
+
+    if (totalCorrect >= skin.req) {
+      card.onclick = () => {
+        Storage.set('selectedSkin', skin.id);
+        drawSkins();
+      };
+    }
+    grid.appendChild(card);
+  });
+}
+
+// Stats
+function drawStats() {
+  const el = document.getElementById('statsContent');
+  const stats = Storage.get('stats', MathEngine.stats);
+  const totalCorrect = getTotalCorrect();
+
+  const opNames = {add: 'Addition (+)', sub: 'Subtraction (−)', mul: 'Multiplication (×)', div: 'Division (÷)'};
+  const opColors = {add: '#4caf50', sub: '#2196f3', mul: '#ff9800', div: '#9c27b0'};
+
+  let html = `<p style="text-align:center;font-weight:bold;color:#333">Total Problems Solved: ${totalCorrect}</p>`;
+
+  // Best and weakest
+  let bestOp = '', worstOp = '', bestAcc = 0, worstAcc = 100;
+
+  Object.keys(opNames).forEach(op => {
+    const s = stats[op] || {correct: 0, total: 0, totalTime: 0};
+    const acc = s.total > 0 ? Math.round(s.correct / s.total * 100) : 0;
+    const avgTime = s.total > 0 ? (s.totalTime / s.total).toFixed(1) : '-';
+
+    if (s.total > 0) {
+      if (acc > bestAcc) { bestAcc = acc; bestOp = opNames[op]; }
+      if (acc < worstAcc) { worstAcc = acc; worstOp = opNames[op]; }
+    }
+
+    html += `<div class="stat-bar-container">
+      <div class="stat-bar-label">${opNames[op]} - ${s.total} problems, avg ${avgTime}s</div>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" style="width:${acc}%;background:${opColors[op]}">${acc}%</div>
+      </div>
+    </div>`;
+  });
+
+  if (bestOp) html += `<p style="color:#4caf50;text-align:center;margin-top:0.5rem"><strong>Strongest:</strong> ${bestOp} (${bestAcc}%)</p>`;
+  if (worstOp && worstOp !== bestOp) html += `<p style="color:#f44336;text-align:center"><strong>Needs practice:</strong> ${worstOp} (${worstAcc}%)</p>`;
+
+  el.innerHTML = html;
+}
+
+// Daily Challenge
+function drawDaily() {
+  const el = document.getElementById('dailyContent');
+  const key = getDailyKey();
+  const completed = Storage.get('dailyCompleted', {});
+  const todayDone = completed[key] || false;
+
+  el.innerHTML = todayDone
+    ? `<p style="text-align:center;color:#4caf50;font-weight:bold;font-size:1.2rem">⭐ Today's challenge complete! ⭐</p>`
+    : `<p style="text-align:center">Complete 20 questions to earn today's star!</p>
+       <button onclick="startDailyChallenge()" style="display:block;margin:1rem auto;padding:0.8rem 2rem;background:#e8760a;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:bold;cursor:pointer">Start Daily Challenge</button>`;
+
+  // Calendar
+  const calEl = document.getElementById('calendarArea');
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  let calHtml = `<h3 style="text-align:center;color:#333;margin-bottom:0.5rem">${now.toLocaleDateString('en-US', {month:'long', year:'numeric'})}</h3>`;
+  calHtml += '<div class="calendar-grid">';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => calHtml += `<div class="cal-header">${d}</div>`);
+  for (let i = 0; i < firstDay; i++) calHtml += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isDone = completed[dateKey];
+    const isToday = d === now.getDate();
+    calHtml += `<div class="cal-day${isDone ? ' completed' : ''}${isToday ? ' today' : ''}">${isDone ? '⭐' : d}</div>`;
+  }
+  calHtml += '</div>';
+  calEl.innerHTML = calHtml;
+}
+
+let isDailyChallenge = false;
+let dailyQuestions = [];
+let dailyIndex = 0;
+
+function startDailyChallenge() {
+  isDailyChallenge = true;
+  dailyQuestions = generateDailyQuestions();
+  dailyIndex = 0;
+  hidePanel('dailyPanel');
+  actuallyStartGame();
+}
+
+// ===================== LEADERBOARD =====================
+function showLeaderboard() {
+  const lb = Storage.get('leaderboard', []);
+  const area = document.getElementById('leaderboardArea');
+  if (lb.length === 0) { area.innerHTML = ''; return; }
+
+  let html = '<table><tr><th class="rank">#</th><th>Name</th><th>Score</th></tr>';
+  lb.slice(0, 5).forEach((entry, i) => {
+    const medal = ['🥇','🥈','🥉'][i] || (i+1);
+    html += `<tr><td class="rank">${medal}</td><td>${entry.name}</td><td>${entry.score} 🥕</td></tr>`;
+  });
+  html += '</table>';
+  area.innerHTML = html;
+}
+
+// ===================== INIT & EVENTS =====================
+function returnToMenu() {
+  gameRunning = false;
+  stopAmbient();
+  document.getElementById('startScreen').style.display = '';
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('questionArea').classList.add('hidden');
+  document.getElementById('menuBtn').style.display = 'none';
+  document.getElementById('victoryScreen').classList.remove('show');
+  isDailyChallenge = false;
+  showLeaderboard();
+  showHighScore();
+}
+
+function actuallyStartGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('questionArea').classList.remove('hidden');
+  document.getElementById('menuBtn').style.display = '';
+
+  score = 0;
+  streak = 0;
+  runDistance = 0;
+  currentEnvIndex = 0;
+  envTransition = 0;
+  totalCorrectThisGame = 0;
+  gameRunning = true;
+  pendingSimilar = null;
+
+  MathEngine.reset();
+
+  if (!scene) initThree();
+
+  // Rebuild rabbit with current skin
+  if (rabbitGroup) { scene.remove(rabbitGroup); }
+  rabbitParts = {};
+  streakItems = {};
+  buildRabbit();
+
+  // Clean up old particles & trails
+  particles.forEach(p => scene.remove(p)); particles = [];
+  trailParticles.forEach(p => scene.remove(p)); trailParticles = [];
+  envParticles.forEach(p => scene.remove(p)); envParticles = [];
+  if (foxCompanion) { scene.remove(foxCompanion); foxCompanion = null; }
+
+  scene.background = new THREE.Color(ENVS[0].sky);
+  startAmbient(0);
+
+  updateHUD();
+  clock.start();
+
+  if (isDailyChallenge) {
+    nextDailyQuestion();
+  } else {
+    nextQuestion();
+  }
+  gameLoop();
+}
+
+function nextDailyQuestion() {
+  if (dailyIndex >= dailyQuestions.length) {
+    // Completed daily
+    const completed = Storage.get('dailyCompleted', {});
+    completed[getDailyKey()] = true;
+    Storage.set('dailyCompleted', completed);
+    // Show congrats
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '⭐ Daily Challenge Complete! ⭐';
+    feedback.className = 'feedback-correct';
+    AudioEngine.victory();
+    setTimeout(() => returnToMenu(), 3000);
+    return;
+  }
+  currentQuestion = dailyQuestions[dailyIndex];
+  currentQuestion.isBoss = false;
+  currentQuestion.isSpeedZone = false;
+  MathEngine.questionStartTime = Date.now();
+
+  document.getElementById('questionText').textContent = `[${dailyIndex+1}/20] ${currentQuestion.text} = ?`;
+  document.getElementById('hintText').textContent = '💡 ' + currentQuestion.hint;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('answerInput').value = '';
+  document.getElementById('answerInput').focus();
+
+  carrotTargetZ = rabbitGroup.position.z - 30;
+  carrotMesh.position.z = carrotTargetZ;
+  carrotMesh.visible = true;
+}
+
+function startGame() {
+  playerName = document.getElementById('playerNameInput').value.trim() || 'Player';
+  Storage.set('lastPlayer', playerName);
+  isDailyChallenge = false;
+  actuallyStartGame();
+}
+
+// Menu button logic
+document.querySelectorAll('#opButtons .opt-btn')?.forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('selected'));
+});
+document.querySelectorAll('#diffButtons .opt-btn')?.forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#diffButtons .opt-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+
+document.getElementById('answerInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (isDailyChallenge) {
+      checkDailyAnswer();
+    } else {
+      checkAnswer();
+    }
+  }
+});
+
+function checkDailyAnswer() {
+  const input = document.getElementById('answerInput');
+  const val = parseInt(input.value);
+  if (isNaN(val)) { AudioEngine.emptySubmit(); shakeQuestion(); return; }
+
+  const feedback = document.getElementById('feedback');
+  if (val === currentQuestion.answer) {
+    score++;
+    streak++;
+    dailyIndex++;
+    rabbitState = 'jumping';
+    stateTimer = 0.8;
+    AudioEngine.correct();
+    spawnParticles(carrotMesh.position.clone(), 0xff8c00, 20);
+    carrotMesh.visible = false;
+    feedback.textContent = 'Correct! ✨';
+    feedback.className = 'feedback-correct';
+    updateHUD();
+    setTimeout(() => nextDailyQuestion(), 1000);
+  } else {
+    streak = 0;
+    rabbitState = 'stumbling';
+    stateTimer = 0.8;
+    AudioEngine.wrong();
+    feedback.textContent = `The answer was ${currentQuestion.answer}`;
+    feedback.className = 'feedback-wrong';
+    dailyIndex++;
+    updateHUD();
+    input.value = '';
+    setTimeout(() => nextDailyQuestion(), 2000);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (gameRunning && e.key === ' ') e.preventDefault();
+});
+
+function showHighScore() {
+  const lb = Storage.get('leaderboard', []);
+  const best = lb.length > 0 ? lb[0].score : 0;
+  if (best > 0) {
+    document.getElementById('highScoreText').textContent = `🏆 Best: ${best} carrots`;
+  }
+}
+
+// Init
+document.getElementById('playerNameInput').value = Storage.get('lastPlayer', '');
+showLeaderboard();
+showHighScore();
+</script>
+</body>
+</html>

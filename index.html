@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kids Games</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.container { text-align: center; color: #fff; }
+h1 { font-size: 3rem; margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+.subtitle { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; }
+.games { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+.game-card { background: rgba(255,255,255,0.95); border-radius: 20px; padding: 2rem; width: 280px; text-decoration: none; color: #333; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+.game-card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+.game-icon { font-size: 4rem; margin-bottom: 1rem; }
+.game-card h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+.game-card p { font-size: 0.95rem; color: #666; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Kids Games</h1>
+<p class="subtitle">Fun educational games</p>
+<div class="games">
+<a href="carrot-runner/" class="game-card">
+<div class="game-icon">🥕</div>
+<h2>Carrot Runner</h2>
+<p>3D math runner with adaptive difficulty</p>
+</a>
+<a href="coyote-trail/" class="game-card">
+<div class="game-icon">🐺</div>
+<h2>Coyote Trail</h2>
+<p>Spelling adventure on the trail</p>
+</a>
+</div>
+</div>
+</body>
+</html>

@@ -10,9 +10,8 @@
 html,body{overflow:hidden;background:#1a0a00;font-family:'Georgia',serif;touch-action:none;margin:0;padding:0;height:100%}
 #game-container{position:relative;width:100vw;height:100%}
 canvas{display:block;position:relative;z-index:1}
-#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;overflow:visible}
-#ui-overlay>*{pointer-events:auto}
-#ui-overlay>#hud{pointer-events:none}
+#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;background:transparent}
+#answer-row,#tile-area,#typing-input,#word-picture,#start-screen,#start-btn,#player-name,#grade-select,.letter-tile,.answer-slot{pointer-events:auto}
 #hud{position:absolute;top:10px;left:10px;right:10px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:20}
 .hud-item{background:rgba(0,0,0,.5);color:#fff;padding:5px 14px;border-radius:20px;font-size:15px;font-weight:bold;text-shadow:1px 1px 2px #000;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #word-display{position:absolute;top:18%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);font-size:36px;font-size:clamp(28px,6vw,56px);font-weight:bold;color:#fff;text-shadow:3px 3px 6px rgba(0,0,0,.9),0 0 20px rgba(255,215,0,.5);letter-spacing:6px;display:none;z-index:15;text-align:center}

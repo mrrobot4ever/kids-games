@@ -7,11 +7,12 @@
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{overflow:hidden;background:#1a0a00;font-family:'Georgia',serif;touch-action:none;height:100%;width:100%;position:fixed;top:0;left:0}
-#game-container{position:relative;width:100%;height:100%}
-canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0}
-#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
+html,body{overflow:hidden;background:#1a0a00;font-family:'Georgia',serif;touch-action:none;margin:0;padding:0;height:100%}
+#game-container{position:relative;width:100vw;height:100%}
+canvas{display:block;position:relative;z-index:1}
+#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;overflow:visible}
 #ui-overlay>*{pointer-events:auto}
+#ui-overlay>#hud{pointer-events:none}
 #hud{position:absolute;top:10px;left:10px;right:10px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:20}
 .hud-item{background:rgba(0,0,0,.5);color:#fff;padding:5px 14px;border-radius:20px;font-size:15px;font-weight:bold;text-shadow:1px 1px 2px #000;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #word-display{position:absolute;top:18%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);font-size:36px;font-size:clamp(28px,6vw,56px);font-weight:bold;color:#fff;text-shadow:3px 3px 6px rgba(0,0,0,.9),0 0 20px rgba(255,215,0,.5);letter-spacing:6px;display:none;z-index:15;text-align:center}
@@ -234,24 +235,39 @@ function loadData() {
 
 // ========== PIXI SETUP ==========
 function getViewHeight() {
+    // iOS Safari: innerHeight changes with address bar, clientHeight is stable
     return document.documentElement.clientHeight || window.innerHeight;
 }
 function getViewWidth() {
     return document.documentElement.clientWidth || window.innerWidth;
 }
+function syncContainerSize() {
+    var h = getViewHeight();
+    var container = document.getElementById('game-container');
+    container.style.height = h + 'px';
+    return h;
+}
 function initPixi() {
+    var h = syncContainerSize();
+    var w = getViewWidth();
+    // Detect WebGL support
+    var useWebGL = true;
+    try {
+        var testCanvas = document.createElement('canvas');
+        useWebGL = !!(testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl'));
+    } catch(e) { useWebGL = false; }
+
     app = new PIXI.Application({
-        width: getViewWidth(),
-        height: getViewHeight(),
+        width: w,
+        height: h,
         backgroundColor: 0x87CEEB,
         antialias: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
-        autoDensity: true
+        autoDensity: true,
+        forceCanvas: !useWebGL,
+        powerPreference: 'default'
     });
-    var cv = app.view;
-    cv.style.width = '100%';
-    cv.style.height = '100%';
-    document.getElementById('game-container').insertBefore(cv, document.getElementById('ui-overlay'));
+    document.getElementById('game-container').insertBefore(app.view, document.getElementById('ui-overlay'));
 
     parallax = { bg: new PIXI.Container(), mid: new PIXI.Container(), fg: new PIXI.Container() };
     app.stage.addChild(parallax.bg);
@@ -268,17 +284,24 @@ function initPixi() {
 
     app.ticker.add(gameLoop);
 
-    window.addEventListener('resize', () => {
-        app.renderer.resize(getViewWidth(), getViewHeight());
+    function handleResize() {
+        var h = syncContainerSize();
+        var w = getViewWidth();
+        app.renderer.resize(w, h);
         buildEnvironment();
-        coyote.y = groundY() - 5;
+        if (coyote) coyote.y = groundY() - 5;
+        companionSprites.forEach(function(comp, i) {
+            comp.y = groundY() - 5;
+        });
+    }
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', function() {
+        setTimeout(handleResize, 300);
     });
-    window.addEventListener('orientationchange', () => {
-        setTimeout(() => {
-            app.renderer.resize(getViewWidth(), getViewHeight());
-            buildEnvironment();
-            coyote.y = groundY() - 5;
-        }, 200);
+    // iOS Safari fires scroll events when address bar hides/shows
+    window.addEventListener('scroll', function(e) {
+        e.preventDefault();
+        window.scrollTo(0, 0);
     });
 }
 

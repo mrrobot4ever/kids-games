@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Adventure Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & BASE ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --pri:#4A7CFF;--pri-dark:#3360D4;--success:#43B581;--warning:#FAA61A;
+  --danger:#F04747;--star:#FFD700;--star-shadow:#E6A800;
+  --math-bg:linear-gradient(135deg,#a8e063,#56ab2f);
+  --math-color:#2D5F0F;--math-light:#E8F5E9;
+  --read-bg:linear-gradient(135deg,#667eea,#764ba2);
+  --read-color:#3A1078;--read-light:#EDE7F6;
+  --hub-sky:#87CEEB;--hub-grass:#4CAF50;
+  --radius:16px;--radius-sm:10px;
+  --shadow:0 4px 16px rgba(0,0,0,0.18);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.22);
+  --font:'Nunito',system-ui,sans-serif;
+  --font-title:'Fredoka One','Nunito',system-ui,sans-serif;
+  --topbar-h:56px;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:#1a1a2e;}
+body{color:#333;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#app{width:100%;height:100%;position:relative;overflow:hidden;}
+
+/* ========== SCREEN TRANSITIONS ========== */
+.screen{width:100%;height:100%;position:absolute;top:0;left:0;display:flex;flex-direction:column;}
+.screen-enter{animation:screenIn .4s ease-out;}
+.screen-exit{animation:screenOut .25s ease-in forwards;}
+@keyframes screenIn{from{opacity:0;transform:scale(1.03);}to{opacity:1;transform:scale(1);}}
+@keyframes screenOut{to{opacity:0;transform:scale(0.97);}}
+
+/* ========== TITLE SCREEN ========== */
+.title-screen{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%);
+  justify-content:center;align-items:center;text-align:center;overflow:hidden;}
+.title-screen h1{font-family:var(--font-title);font-size:clamp(2.5rem,8vw,5rem);
+  background:linear-gradient(135deg,#FFD700,#FF6B35,#FF1493,#00D2FF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  animation:titlePulse 3s ease-in-out infinite;}
+@keyframes titlePulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+.title-screen .subtitle{color:#aab;font-size:clamp(1rem,3vw,1.4rem);margin:8px 0 32px;font-weight:600;}
+.title-stars{position:absolute;width:100%;height:100%;pointer-events:none;}
+.title-star{position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;animation:twinkle var(--d) ease-in-out infinite;}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(1);}50%{opacity:1;transform:scale(1.5);}}
+.name-input{background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.3);
+  border-radius:var(--radius);padding:14px 24px;font-size:1.3rem;color:#fff;
+  font-family:var(--font);text-align:center;width:min(320px,80vw);outline:none;
+  transition:border-color .3s;}
+.name-input:focus{border-color:var(--star);}
+.name-input::placeholder{color:rgba(255,255,255,0.4);}
+
+/* ========== BUTTONS ========== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 32px;border-radius:var(--radius);border:none;cursor:pointer;
+  font-family:var(--font-title);font-size:1.15rem;font-weight:700;
+  transition:transform .15s,box-shadow .15s;user-select:none;
+  box-shadow:var(--shadow);min-height:52px;min-width:52px;}
+.btn:active{transform:scale(0.95)!important;}
+.btn-primary{background:var(--pri);color:#fff;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.btn-success{background:var(--success);color:#fff;}
+.btn-warning{background:var(--warning);color:#fff;}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-star{background:linear-gradient(135deg,#FFD700,#FFA500);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,0.15);color:#fff;backdrop-filter:blur(4px);}
+.btn-ghost:hover{background:rgba(255,255,255,0.25);}
+.btn-round{border-radius:50%;padding:12px;width:52px;height:52px;}
+.btn-lg{padding:18px 40px;font-size:1.35rem;border-radius:20px;}
+.btn[disabled]{opacity:0.4;pointer-events:none;}
+
+/* ========== TOP BAR ========== */
+.topbar{height:var(--topbar-h);display:flex;align-items:center;padding:0 16px;gap:12px;
+  background:rgba(0,0,0,0.25);backdrop-filter:blur(8px);z-index:10;flex-shrink:0;}
+.topbar .player-info{display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:.95rem;}
+.topbar .avatar-small{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFE66D);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.topbar .star-count{margin-left:auto;display:flex;align-items:center;gap:6px;
+  color:var(--star);font-weight:800;font-size:1.1rem;font-family:var(--font-title);}
+.topbar .back-btn{background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:4px 8px;}
+
+/* ========== HUB WORLD MAP ========== */
+.hub-screen{background:linear-gradient(180deg,#87CEEB 0%,#87CEEB 55%,#90EE90 55%,#4CAF50 100%);}
+.hub-map{flex:1;position:relative;overflow:hidden;}
+.hub-cloud{position:absolute;background:#fff;border-radius:50%;opacity:0.8;animation:cloudDrift var(--d) linear infinite;}
+@keyframes cloudDrift{from{transform:translateX(calc(100vw + 100px));}to{transform:translateX(-200px);}}
+.hub-sun{position:absolute;top:20px;right:30px;width:80px;height:80px;
+  background:radial-gradient(circle,#FFD700,#FFA500);border-radius:50%;
+  box-shadow:0 0 60px rgba(255,215,0,0.6);animation:sunPulse 4s ease-in-out infinite;}
+@keyframes sunPulse{0%,100%{box-shadow:0 0 60px rgba(255,215,0,0.6);}50%{box-shadow:0 0 90px rgba(255,215,0,0.8);}}
+
+/* Mountain (left) */
+.hub-mountain{position:absolute;bottom:0;left:5%;width:40%;height:65%;cursor:pointer;transition:transform .3s;}
+.hub-mountain:hover{transform:scale(1.03);}
+.mountain-shape{position:absolute;bottom:0;width:100%;height:100%;}
+.mountain-peak{position:absolute;bottom:0;left:15%;width:70%;height:100%;
+  background:linear-gradient(180deg,#8B6914 0%,#6B8E23 30%,#228B22 60%,#32CD32 100%);
+  clip-path:polygon(50% 0%,15% 100%,85% 100%);filter:drop-shadow(4px 4px 8px rgba(0,0,0,0.3));}
+.mountain-snow{position:absolute;bottom:0;left:15%;width:70%;height:100%;
+  background:linear-gradient(180deg,#fff 0%,transparent 15%);
+  clip-path:polygon(50% 0%,15% 100%,85% 100%);opacity:0.9;}
+.mountain-peak2{position:absolute;bottom:0;left:35%;width:55%;height:75%;
+  background:linear-gradient(180deg,#9B7B2C 0%,#7B9E33 30%,#2E8B2E 60%,#3AD33A 100%);
+  clip-path:polygon(50% 0%,10% 100%,90% 100%);filter:drop-shadow(4px 4px 8px rgba(0,0,0,0.2));}
+.hub-mountain .area-label{position:absolute;top:18%;left:50%;transform:translateX(-50%);
+  font-family:var(--font-title);font-size:clamp(1rem,3vw,1.6rem);color:#fff;
+  text-shadow:2px 2px 6px rgba(0,0,0,0.5);text-align:center;white-space:nowrap;z-index:2;}
+.hub-mountain .area-emoji{font-size:clamp(2rem,5vw,3.5rem);display:block;margin-bottom:4px;}
+
+/* River (right) */
+.hub-river{position:absolute;bottom:0;right:5%;width:40%;height:55%;cursor:pointer;transition:transform .3s;}
+.hub-river:hover{transform:scale(1.03);}
+.river-bg{position:absolute;bottom:0;width:100%;height:100%;
+  background:linear-gradient(180deg,#4169E1 0%,#1E90FF 40%,#00BFFF 70%,#87CEEB 100%);
+  clip-path:polygon(20% 0%,80% 0%,95% 30%,85% 60%,100% 100%,0% 100%,15% 60%,5% 30%);
+  filter:drop-shadow(4px 4px 8px rgba(0,0,0,0.3));}
+.river-shimmer{position:absolute;bottom:0;width:100%;height:100%;
+  background:repeating-linear-gradient(180deg,transparent,transparent 8px,rgba(255,255,255,0.15) 8px,rgba(255,255,255,0.15) 10px);
+  clip-path:polygon(20% 0%,80% 0%,95% 30%,85% 60%,100% 100%,0% 100%,15% 60%,5% 30%);
+  animation:shimmer 2s ease-in-out infinite;}
+@keyframes shimmer{0%,100%{opacity:0.5;}50%{opacity:1;}}
+.hub-river .area-label{position:absolute;top:8%;left:50%;transform:translateX(-50%);
+  font-family:var(--font-title);font-size:clamp(1rem,3vw,1.6rem);color:#fff;
+  text-shadow:2px 2px 6px rgba(0,0,0,0.5);text-align:center;white-space:nowrap;z-index:2;}
+.hub-river .area-emoji{font-size:clamp(2rem,5vw,3.5rem);display:block;margin-bottom:4px;}
+
+/* Trees */
+.hub-tree{position:absolute;width:30px;pointer-events:none;}
+.hub-tree .trunk{width:8px;height:20px;background:#8B4513;margin:0 auto;border-radius:0 0 3px 3px;}
+.hub-tree .leaves{width:30px;height:30px;background:#228B22;border-radius:50%;margin:0 auto;}
+
+/* Hub bottom bar */
+.hub-bottom{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:center;
+  gap:16px;padding:16px;z-index:5;}
+
+/* ========== PATH SCREEN (TIER MAP) ========== */
+.path-screen{transition:background .3s;}
+.path-screen.math{background:linear-gradient(180deg,#2D5F0F 0%,#4a7c1f 30%,#6B8E23 60%,#9ACD32 100%);}
+.path-screen.reading{background:linear-gradient(180deg,#1a0533 0%,#3A1078 30%,#4A2FBD 60%,#6C63FF 100%);}
+.tier-list{flex:1;display:flex;flex-direction:column-reverse;align-items:center;
+  padding:20px;gap:0;overflow-y:auto;position:relative;}
+.tier-node{position:relative;display:flex;align-items:center;gap:16px;
+  padding:16px 24px;border-radius:var(--radius);cursor:pointer;
+  transition:transform .2s,box-shadow .2s;width:min(380px,90vw);z-index:2;}
+.tier-node:hover:not(.locked){transform:scale(1.04);box-shadow:var(--shadow-lg);}
+.tier-node.locked{opacity:0.5;cursor:not-allowed;filter:grayscale(0.5);}
+.tier-node.current{animation:tierBounce 2s ease-in-out infinite;}
+@keyframes tierBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.tier-node .tier-icon{width:56px;height:56px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.tier-node .tier-info{flex:1;}
+.tier-node .tier-name{font-family:var(--font-title);font-size:1.05rem;color:#fff;margin-bottom:2px;}
+.tier-node .tier-desc{font-size:.8rem;color:rgba(255,255,255,0.7);}
+.tier-node .tier-stars{display:flex;gap:2px;margin-top:4px;}
+.tier-node .lock-icon{font-size:1.5rem;}
+.tier-connector{width:4px;height:40px;background:rgba(255,255,255,0.25);
+  border-radius:2px;z-index:1;position:relative;}
+.tier-connector.unlocked{background:rgba(255,255,255,0.6);
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,0.6) 0px,rgba(255,255,255,0.6) 6px,transparent 6px,transparent 12px);}
+
+/* ========== LEVEL SELECT ========== */
+.level-screen{justify-content:flex-start;}
+.level-screen.math{background:linear-gradient(180deg,#E8F5E9,#C8E6C9);}
+.level-screen.reading{background:linear-gradient(180deg,#EDE7F6,#D1C4E9);}
+.level-grid{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:16px;padding:20px;overflow-y:auto;}
+.level-card{width:min(140px,28vw);aspect-ratio:1;border-radius:var(--radius);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  cursor:pointer;transition:transform .2s;box-shadow:var(--shadow);position:relative;}
+.level-card:hover:not(.locked){transform:translateY(-4px);}
+.level-card.locked{opacity:0.4;cursor:not-allowed;background:#ccc!important;}
+.level-card.current{box-shadow:0 0 0 4px var(--star),var(--shadow-lg);animation:levelGlow 2s infinite;}
+@keyframes levelGlow{0%,100%{box-shadow:0 0 0 4px var(--star),var(--shadow);}
+  50%{box-shadow:0 0 0 8px rgba(255,215,0,0.4),var(--shadow-lg);}}
+.level-card .level-num{font-family:var(--font-title);font-size:1.8rem;color:#fff;}
+.level-card .level-title{font-size:.7rem;color:rgba(255,255,255,0.9);text-align:center;padding:0 6px;font-weight:700;}
+.level-card .level-stars{display:flex;gap:3px;}
+.level-card .lock-big{font-size:2rem;opacity:0.6;}
+.star-icon{color:var(--star);font-size:1rem;}
+.star-icon.empty{opacity:0.3;}
+
+/* ========== GAMEPLAY SCREEN ========== */
+.game-screen{background:linear-gradient(180deg,#f8f9ff,#e8ecff);}
+.game-screen.math{background:linear-gradient(180deg,#f0fff0,#d4edda);}
+.game-screen.reading{background:linear-gradient(180deg,#f5f0ff,#e0d4f5);}
+.game-content{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:20px;gap:20px;overflow-y:auto;}
+.progress-track{width:min(400px,90vw);height:10px;background:rgba(0,0,0,0.1);
+  border-radius:5px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--success);border-radius:5px;transition:width .4s ease;}
+.progress-label{font-size:.85rem;color:#666;font-weight:700;}
+
+.question-area{width:min(600px,92vw);text-align:center;}
+.question-text{font-family:var(--font-title);font-size:clamp(1.2rem,4vw,1.8rem);
+  color:#333;margin-bottom:24px;line-height:1.4;}
+.question-visual{font-size:clamp(2rem,6vw,3.5rem);margin-bottom:16px;letter-spacing:4px;}
+
+/* Multiple choice */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;}
+.choice-btn{padding:16px;border-radius:var(--radius-sm);border:3px solid #ddd;
+  background:#fff;cursor:pointer;font-size:clamp(1rem,3vw,1.25rem);font-weight:700;
+  font-family:var(--font);transition:all .2s;min-height:56px;color:#333;
+  display:flex;align-items:center;justify-content:center;text-align:center;}
+.choice-btn:hover{border-color:var(--pri);background:#f0f4ff;}
+.choice-btn.correct{background:#d4edda;border-color:var(--success);color:var(--success);animation:correctPop .4s;}
+.choice-btn.wrong{background:#f8d7da;border-color:var(--danger);color:var(--danger);animation:shake .4s;}
+.choice-btn.disabled{pointer-events:none;opacity:0.6;}
+@keyframes correctPop{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+
+/* Type in */
+.type-input{font-size:2rem;text-align:center;padding:12px 24px;border:3px solid #ddd;
+  border-radius:var(--radius);width:min(200px,60vw);font-family:var(--font-title);
+  outline:none;transition:border-color .3s;color:#333;}
+.type-input:focus{border-color:var(--pri);}
+.type-submit{margin-top:12px;}
+
+/* Drag and drop */
+.drag-container{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:8px;}
+.drag-item{padding:12px 20px;background:#fff;border:3px solid #ddd;border-radius:var(--radius-sm);
+  cursor:grab;font-size:clamp(1rem,3vw,1.3rem);font-weight:700;font-family:var(--font);
+  user-select:none;transition:transform .15s,box-shadow .15s;touch-action:none;color:#333;}
+.drag-item:active{cursor:grabbing;transform:scale(1.1);box-shadow:var(--shadow-lg);z-index:10;}
+.drag-item.placed{background:var(--success);color:#fff;border-color:var(--success);}
+.drop-zones{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.drop-zone{width:70px;height:56px;border:3px dashed #bbb;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;
+  transition:all .2s;color:#999;}
+.drop-zone.filled{border-style:solid;border-color:var(--pri);background:rgba(74,124,255,0.1);color:#333;}
+.drop-zone.highlight{border-color:var(--star);background:rgba(255,215,0,0.15);}
+
+/* Reading passage */
+.passage-box{background:#fff;border-radius:var(--radius);padding:20px;
+  box-shadow:var(--shadow);text-align:left;line-height:1.8;font-size:clamp(.95rem,2.5vw,1.15rem);
+  max-width:min(560px,90vw);margin-bottom:16px;color:#444;}
+
+/* ========== RESULTS SCREEN ========== */
+.results-screen{background:linear-gradient(180deg,#1a1a2e,#16213e);
+  justify-content:center;align-items:center;text-align:center;overflow:hidden;}
+.results-title{font-family:var(--font-title);font-size:clamp(1.8rem,5vw,2.8rem);
+  color:#fff;margin-bottom:8px;}
+.results-subtitle{color:#aab;font-size:1.1rem;margin-bottom:24px;}
+.results-stars{display:flex;gap:16px;margin-bottom:32px;}
+.result-star{font-size:3rem;opacity:0;transform:scale(0);animation:starPop .6s forwards;}
+.result-star:nth-child(1){animation-delay:.3s;}
+.result-star:nth-child(2){animation-delay:.7s;}
+.result-star:nth-child(3){animation-delay:1.1s;}
+@keyframes starPop{0%{opacity:0;transform:scale(0) rotate(-180deg);}
+  70%{opacity:1;transform:scale(1.3) rotate(10deg);}100%{opacity:1;transform:scale(1) rotate(0);}}
+.result-star.empty{filter:grayscale(1) brightness(0.4);}
+.results-score{color:#aab;font-size:1rem;margin-bottom:24px;}
+.results-buttons{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.collectible-reveal{margin:20px 0;padding:20px;background:rgba(255,215,0,0.1);
+  border:2px solid var(--star);border-radius:var(--radius);color:#fff;text-align:center;
+  animation:revealGlow 2s infinite;}
+@keyframes revealGlow{0%,100%{box-shadow:0 0 20px rgba(255,215,0,0.2);}
+  50%{box-shadow:0 0 40px rgba(255,215,0,0.5);}}
+.collectible-emoji{font-size:3rem;display:block;margin-bottom:8px;}
+
+/* ========== CONFETTI ========== */
+.confetti-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;}
+.confetti-piece{position:absolute;width:10px;height:10px;top:-20px;animation:confettiFall var(--d) linear forwards;}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}
+  100%{transform:translateY(110vh) rotate(var(--r));opacity:0;}}
+
+/* ========== TROPHY ROOM ========== */
+.trophy-screen{background:linear-gradient(180deg,#2c1810,#4a2c17,#6b3a1f);}
+.trophy-grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+  gap:16px;padding:20px;overflow-y:auto;align-content:start;}
+.trophy-card{aspect-ratio:1;border-radius:var(--radius);background:rgba(255,255,255,0.08);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:2px solid rgba(255,255,255,0.1);transition:transform .2s;}
+.trophy-card.collected{background:rgba(255,215,0,0.1);border-color:var(--star);cursor:pointer;}
+.trophy-card.collected:hover{transform:scale(1.08);}
+.trophy-card .trophy-emoji{font-size:2.2rem;}
+.trophy-card.locked .trophy-emoji{filter:grayscale(1) brightness(0.3);}
+.trophy-card .trophy-name{font-size:.65rem;color:rgba(255,255,255,0.6);text-align:center;font-weight:700;}
+.trophy-card.collected .trophy-name{color:var(--star);}
+
+/* ========== MODAL ========== */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;
+  z-index:50;animation:fadeIn .3s;}
+.modal{background:#fff;border-radius:20px;padding:32px;max-width:min(420px,90vw);
+  width:100%;text-align:center;box-shadow:var(--shadow-lg);animation:modalPop .4s;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes modalPop{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ========== FEEDBACK OVERLAY ========== */
+.feedback{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:var(--font-title);font-size:clamp(2rem,8vw,4rem);z-index:30;
+  pointer-events:none;animation:feedbackPop .8s forwards;}
+@keyframes feedbackPop{0%{opacity:1;transform:translate(-50%,-50%) scale(0.5);}
+  40%{transform:translate(-50%,-50%) scale(1.2);}
+  100%{opacity:0;transform:translate(-50%,-70%) scale(1);}}
+.feedback.correct{color:var(--success);}
+.feedback.wrong{color:var(--danger);}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:480px){
+  .choices{grid-template-columns:1fr;}
+  .hub-mountain,.hub-river{width:44%;}
+  .topbar{padding:0 8px;gap:8px;}
+  .topbar .player-info span:not(.avatar-small){display:none;}
+}
+@media(min-width:768px){
+  .level-grid{gap:24px;padding:32px;}
+  .level-card{width:150px;}
+}
+@media(min-width:1024px){
+  .hub-mountain,.hub-river{width:35%;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ========== CONSTANTS & CONFIG ==========
+const TIERS_PER_PATH=5,LEVELS_PER_TIER=5,QUESTIONS_PER_LEVEL=8;
+const MATH_TIERS=[
+  {name:'Counting Foothills',desc:'Count & recognize numbers',icon:'🔢',colors:['#66BB6A','#43A047']},
+  {name:'Addition Cliffs',desc:'Adding numbers together',icon:'➕',colors:['#42A5F5','#1E88E5']},
+  {name:'Multiplication Mesa',desc:'Times tables & arrays',icon:'✖️',colors:['#AB47BC','#8E24AA']},
+  {name:'Division Heights',desc:'Dividing & mixed operations',icon:'➗',colors:['#EF5350','#E53935']},
+  {name:'Fraction Summit',desc:'Fractions & word problems',icon:'🥧',colors:['#FF7043','#F4511E']}
+];
+const READ_TIERS=[
+  {name:'Letter Lagoon',desc:'Letters & beginning sounds',icon:'🔤',colors:['#26C6DA','#00ACC1']},
+  {name:'Sight Word Stream',desc:'Sight words & matching',icon:'👀',colors:['#66BB6A','#43A047']},
+  {name:'Vocabulary Rapids',desc:'Words & sentences',icon:'📖',colors:['#FFA726','#FB8C00']},
+  {name:'Story Falls',desc:'Short reading passages',icon:'📚',colors:['#EC407A','#D81B60']},
+  {name:'Comprehension Peak',desc:'Longer passages & inference',icon:'🧠',colors:['#7E57C2','#5E35B1']}
+];
+const MATH_LEVEL_NAMES=[
+  ['Count Objects','Match Numbers','Number Order','Greater or Less','Missing Numbers'],
+  ['Add with Pictures','Simple Addition','Bigger Addition','Simple Subtraction','Mixed Add & Sub'],
+  ['Skip Counting','Arrays','Times Tables','Harder Tables','Mixed Multiply'],
+  ['Simple Division','Division Groups','Mixed Operations','Order of Ops','Challenge Mix'],
+  ['Fraction Names','Fraction Pictures','Compare Fractions','Fraction Add','Word Problems']
+];
+const READ_LEVEL_NAMES=[
+  ['Letter Match','Uppercase ABC','Beginning Sounds','Rhyming Words','Letter Mix'],
+  ['Flash Words','Word Match','Missing Word','Word Scramble','Sight Sprint'],
+  ['Finish the Sentence','Synonym Match','Antonym Match','Context Clues','Vocab Mix'],
+  ['Short Stories','Who Did What','True or False','Sequence Events','Story Mix'],
+  ['Main Idea','Inference','Author Purpose','Details Hunt','Comprehension Mix']
+];
+const COLLECTIBLES=[
+  {id:'m0',emoji:'🦁',name:'Leo the Lion'},
+  {id:'m1',emoji:'🦊',name:'Felix the Fox'},
+  {id:'m2',emoji:'🐉',name:'Drake the Dragon'},
+  {id:'m3',emoji:'🦅',name:'Eagle Eddie'},
+  {id:'m4',emoji:'🦄',name:'Unicorn Uma'},
+  {id:'r0',emoji:'🐬',name:'Delphi Dolphin'},
+  {id:'r1',emoji:'🐢',name:'Shelby Turtle'},
+  {id:'r2',emoji:'🦋',name:'Bella Butterfly'},
+  {id:'r3',emoji:'🐙',name:'Otto Octopus'},
+  {id:'r4',emoji:'🦜',name:'Polly Parrot'}
+];
+const SIGHT_WORDS=[
+  ['the','and','a','to','said','in','he','I','it','you','is','his','that','she','was','for','on','are','as','with'],
+  ['they','at','be','this','have','from','or','one','had','by','but','not','what','all','were','we','when','can','an','your'],
+  ['which','their','if','will','up','other','about','out','many','then','them','these','so','some','her','would','make','like','him','into'],
+  ['has','look','two','more','no','way','could','my','than','first','been','its','who','now','people','made','over','did','down','only'],
+  ['because','before','through','where','much','right','too','does','another','came','want','around','every','important','between','should','still','never','animal','house']
+];
+const SYNONYMS=[
+  ['happy','glad'],['sad','unhappy'],['big','large'],['small','tiny'],['fast','quick'],
+  ['smart','clever'],['brave','courageous'],['pretty','beautiful'],['angry','mad'],['cold','chilly'],
+  ['start','begin'],['end','finish'],['close','shut'],['speak','talk'],['look','see']
+];
+const ANTONYMS=[
+  ['hot','cold'],['big','small'],['happy','sad'],['fast','slow'],['up','down'],
+  ['light','dark'],['old','new'],['hard','soft'],['open','close'],['loud','quiet'],
+  ['full','empty'],['wet','dry'],['rich','poor'],['long','short'],['tall','short']
+];
+const PASSAGES=[
+  {text:"The sun was shining bright. Emma put on her hat and went outside. She saw a butterfly in the garden. It was orange and black.",
+   questions:[
+     {q:"What was the weather like?",a:"Sunny",wrong:["Rainy","Snowy","Cloudy"]},
+     {q:"What did Emma put on?",a:"Her hat",wrong:["Her coat","Her shoes","Her gloves"]},
+     {q:"What did Emma see?",a:"A butterfly",wrong:["A bird","A cat","A dog"]},
+     {q:"What color was the butterfly?",a:"Orange and black",wrong:["Blue and white","Red and yellow","Green and brown"]}
+   ]},
+  {text:"Tom has a red bike. He rides it to school every day. His friend Sam walks to school. They meet at the front gate and go inside together.",
+   questions:[
+     {q:"What color is Tom's bike?",a:"Red",wrong:["Blue","Green","Yellow"]},
+     {q:"How does Sam get to school?",a:"He walks",wrong:["He rides a bike","He takes a bus","He drives"]},
+     {q:"Where do Tom and Sam meet?",a:"At the front gate",wrong:["At the park","At the store","In the classroom"]},
+     {q:"How often does Tom ride his bike to school?",a:"Every day",wrong:["Once a week","Sometimes","Never"]}
+   ]},
+  {text:"Bears sleep through the winter. This is called hibernation. They eat lots of food in the fall to get ready. When spring comes, they wake up hungry.",
+   questions:[
+     {q:"What is it called when bears sleep through winter?",a:"Hibernation",wrong:["Migration","Vacation","Relaxation"]},
+     {q:"When do bears eat a lot of food?",a:"In the fall",wrong:["In the spring","In the summer","In the winter"]},
+     {q:"How do bears feel when they wake up?",a:"Hungry",wrong:["Happy","Scared","Sleepy"]},
+     {q:"What is the main idea of this passage?",a:"Bears hibernate in winter",wrong:["Bears are scary","Bears eat fish","Bears live in caves"]}
+   ]},
+  {text:"The ocean is home to many animals. Fish swim in schools. Dolphins jump out of the water. Crabs walk sideways on the sand. The ocean is a busy place!",
+   questions:[
+     {q:"Where do these animals live?",a:"The ocean",wrong:["The forest","The desert","The mountains"]},
+     {q:"How do crabs walk?",a:"Sideways",wrong:["Forward","Backward","In circles"]},
+     {q:"What do dolphins do?",a:"Jump out of the water",wrong:["Walk on sand","Fly in the sky","Sleep all day"]},
+     {q:"What is a group of fish called?",a:"A school",wrong:["A team","A herd","A pack"]}
+   ]},
+  {text:"Plants need three things to grow: water, sunlight, and soil. Roots take in water from the soil. Leaves use sunlight to make food. Without any of these, a plant cannot survive.",
+   questions:[
+     {q:"How many things do plants need to grow?",a:"Three",wrong:["Two","Four","Five"]},
+     {q:"What do roots do?",a:"Take in water",wrong:["Make food","Get sunlight","Grow leaves"]},
+     {q:"What do leaves use to make food?",a:"Sunlight",wrong:["Water","Soil","Air"]},
+     {q:"What is the main idea?",a:"Plants need water, sunlight, and soil to grow",wrong:["Plants are green","Roots are underground","Leaves are big"]}
+   ]},
+  {text:"Long ago, people used horses to travel. Then trains were invented. Cars came after that. Now we even have airplanes that fly across the world. Transportation has changed a lot!",
+   questions:[
+     {q:"What did people use first to travel?",a:"Horses",wrong:["Cars","Trains","Airplanes"]},
+     {q:"What was invented after trains?",a:"Cars",wrong:["Horses","Bicycles","Boats"]},
+     {q:"What can fly across the world?",a:"Airplanes",wrong:["Cars","Trains","Horses"]},
+     {q:"What is this passage mostly about?",a:"How transportation has changed",wrong:["How to drive a car","The history of horses","Why planes are fast"]}
+   ]},
+  {text:"Maria loved to paint. Every Saturday, she would set up her easel in the park. She painted trees, flowers, and the pond. People walking by would stop and watch. One day, an art teacher saw her work and said she had real talent.",
+   questions:[
+     {q:"When did Maria paint in the park?",a:"Every Saturday",wrong:["Every Monday","Every day","Once a month"]},
+     {q:"What did Maria paint?",a:"Trees, flowers, and the pond",wrong:["Houses and cars","Animals","People"]},
+     {q:"Who noticed Maria's talent?",a:"An art teacher",wrong:["Her mother","A police officer","Her friend"]},
+     {q:"You can infer that Maria is:",a:"A talented artist",wrong:["A teacher","A scientist","A doctor"]}
+   ]},
+  {text:"Recycling helps our planet. When we recycle paper, we save trees. Recycling plastic keeps it out of the ocean. Recycling metal means we dig up less from the ground. Everyone can help by putting items in the right bin.",
+   questions:[
+     {q:"What does recycling paper save?",a:"Trees",wrong:["Water","Metal","Plastic"]},
+     {q:"Where does plastic end up if we don't recycle?",a:"The ocean",wrong:["The sky","The forest","The desert"]},
+     {q:"How can everyone help?",a:"Put items in the right bin",wrong:["Drive less","Plant trees","Use less water"]},
+     {q:"What is the author's purpose?",a:"To encourage recycling",wrong:["To entertain","To tell a story","To describe nature"]}
+   ]}
+];
+const CVC_WORDS=['cat','bat','hat','mat','sat','rat','pat','fat','can','fan','man','pan','ran','van','tan','ban',
+  'big','dig','fig','pig','wig','jig','rig','bit','fit','hit','kit','lit','pit','sit','wit',
+  'dog','fog','hog','log','jog','cot','dot','got','hot','lot','not','pot','top','hop','mop','pop',
+  'bug','dug','hug','jug','mug','rug','tug','but','cut','gut','hut','nut','put','run','sun','fun',
+  'bed','fed','led','red','wed','den','hen','men','pen','ten','get','let','met','net','pet','set','wet','yet'];
+const RHYME_FAMILIES={
+  'at':['cat','bat','hat','mat','sat','rat','pat','fat'],
+  'an':['can','fan','man','pan','ran','van','tan','ban'],
+  'ig':['big','dig','fig','pig','wig','jig','rig'],
+  'og':['dog','fog','hog','log','jog'],
+  'ot':['cot','dot','got','hot','lot','not','pot'],
+  'op':['top','hop','mop','pop'],
+  'ug':['bug','dug','hug','jug','mug','rug','tug'],
+  'ut':['but','cut','gut','hut','nut'],
+  'un':['run','sun','fun','bun','gun'],
+  'ed':['bed','fed','led','red','wed'],
+  'en':['den','hen','men','pen','ten'],
+  'et':['get','let','met','net','pet','set','wet','yet']
+};
+
+// ========== SEEDED RANDOM ==========
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
+function seededRng(path,tier,level,qi){
+  let h=0;const s=`${path}${tier}${level}${qi}`;
+  for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
+  return mulberry32(h);}
+function shuffle(arr,rng){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*
+  (i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pick(arr,rng){return arr[Math.floor(rng()*arr.length)];}
+function pickN(arr,n,rng){return shuffle(arr,rng).slice(0,n);}
+function randInt(min,max,rng){return Math.floor(rng()*(max-min+1))+min;}
+
+// ========== STATE MANAGEMENT ==========
+const State={
+  _data:{},_listeners:[],
+  get(k){return this._data[k];},
+  set(k,v){this._data[k]=v;this._listeners.forEach(fn=>fn(k,v));},
+  save(){try{localStorage.setItem('adventure-academy-v2',JSON.stringify({
+    playerName:this._data.playerName,progress:this._data.progress,
+    collectibles:this._data.collectibles,totalStars:this._data.totalStars
+  }));}catch(e){}},
+  load(){try{const d=JSON.parse(localStorage.getItem('adventure-academy-v2'));
+    if(d){this._data.playerName=d.playerName;this._data.progress=d.progress;
+      this._data.collectibles=d.collectibles||[];this._data.totalStars=d.totalStars||0;return true;}
+  }catch(e){}return false;},
+  init(){
+    this._data={currentScreen:'title',screenParams:{},playerName:'',
+      progress:{math:Array.from({length:5},()=>[0,0,0,0,0]),
+                reading:Array.from({length:5},()=>[0,0,0,0,0])},
+      collectibles:[],totalStars:0,soundEnabled:true};
+    if(this.load()&&this._data.playerName)this._data.currentScreen='hub';},
+  subscribe(fn){this._listeners.push(fn);},
+  getStarsForTier(path,tier){return this._data.progress[path][tier].reduce((a,b)=>a+b,0);},
+  isTierUnlocked(path,tier){if(tier===0)return true;
+    return this._data.progress[path][tier-1].every(s=>s>0);},
+  isLevelUnlocked(path,tier,level){if(!this.isTierUnlocked(path,tier))return false;
+    if(level===0)return true;return this._data.progress[path][tier][level-1]>0;},
+  completeLevel(path,tier,level,stars){
+    const old=this._data.progress[path][tier][level];
+    if(stars>old){this._data.progress[path][tier][level]=stars;
+      this._data.totalStars=this.calcTotalStars();}
+    // Check tier completion for collectible
+    const prefix=path==='math'?'m':'r';
+    const cid=prefix+tier;
+    const tierDone=this._data.progress[path][tier].every(s=>s>0);
+    let newCollectible=null;
+    if(tierDone&&!this._data.collectibles.includes(cid)){
+      this._data.collectibles.push(cid);
+      newCollectible=COLLECTIBLES.find(c=>c.id===cid);}
+    this.save();return newCollectible;},
+  calcTotalStars(){let t=0;['math','reading'].forEach(p=>{
+    this._data.progress[p].forEach(tier=>{tier.forEach(s=>{t+=s;});});});return t;}
+};
+
+// ========== AUDIO ENGINE ==========
+const Audio={
+  ctx:null,
+  init(){if(this.ctx)return;try{this.ctx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}},
+  resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();},
+  play(name){
+    if(!State.get('soundEnabled'))return;this.init();if(!this.ctx)return;this.resume();
+    const fn=this['_'+name];if(fn)fn.call(this);},
+  _click(){this._tone(800,.08,'sine',.15);},
+  _correct(){const t=this.ctx.currentTime;
+    this._tone(523,.15,'sine',.2,t);this._tone(659,.15,'sine',.2,t+.08);this._tone(784,.25,'sine',.2,t+.16);},
+  _wrong(){this._tone(200,.3,'sawtooth',.1);},
+  _star(){const t=this.ctx.currentTime;
+    this._tone(600,.12,'triangle',.15,t);this._tone(900,.12,'triangle',.15,t+.1);this._tone(1200,.3,'triangle',.15,t+.2);},
+  _fanfare(){const t=this.ctx.currentTime;const notes=[523,587,659,784,880,1047];
+    notes.forEach((f,i)=>this._tone(f,.2,'sine',.12,t+i*.12));},
+  _unlock(){const t=this.ctx.currentTime;
+    [400,500,600,800].forEach((f,i)=>this._tone(f,.3,'sine',.12,t+i*.15));},
+  _tone(freq,dur,type,vol,when){
+    const t=when||this.ctx.currentTime;const o=this.ctx.createOscillator();
+    const g=this.ctx.createGain();o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.15,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+    o.connect(g);g.connect(this.ctx.destination);o.start(t);o.stop(t+dur+.05);}
+};
+
+// ========== ROUTER ==========
+const Router={
+  screens:{},current:null,
+  register(name,fn){this.screens[name]=fn;},
+  navigate(screen,params={}){
+    State.set('currentScreen',screen);State.set('screenParams',params);
+    const app=document.getElementById('app');
+    app.innerHTML='';this.screens[screen](app,params);this.current=screen;
+  }
+};
+
+// ========== UTILITY ==========
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;
+  if(html!==undefined)e.innerHTML=html;return e;}
+function starHTML(count,max=3){let s='';for(let i=0;i<max;i++)s+=`<span class="star-icon${i<count?'':' empty'}">⭐</span>`;return s;}
+function showFeedback(correct){
+  const fb=el('div','feedback '+(correct?'correct':'wrong'),correct?'✓ Correct!':'✗ Try Again');
+  document.body.appendChild(fb);setTimeout(()=>fb.remove(),900);}
+function showConfetti(){
+  const c=el('div','confetti-container');const colors=['#FF6B6B','#FFE66D','#4ECDC4','#45B7D1','#96E6A1','#DDA0DD','#FF9A76'];
+  for(let i=0;i<60;i++){const p=el('div','confetti-piece');
+    p.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};
+    --d:${1.5+Math.random()*2}s;--r:${Math.random()*720}deg;
+    width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
+    border-radius:${Math.random()>.5?'50%':'2px'};animation-delay:${Math.random()*.5}s;`;
+    c.appendChild(p);}
+  document.body.appendChild(c);setTimeout(()=>c.remove(),4000);}
+
+// ========== CONTENT GENERATORS ==========
+// Each returns {question,visual,choices,answer,type,items,zones} depending on mechanic
+
+function genMathQuestion(tier,level,qi){
+  const rng=seededRng('math',tier,level,qi);
+  if(tier===0)return genCounting(level,rng);
+  if(tier===1)return genAddSub(level,rng);
+  if(tier===2)return genMultiply(level,rng);
+  if(tier===3)return genDivision(level,rng);
+  return genFractions(level,rng);
+}
+
+function genCounting(level,rng){
+  if(level===0){// Count objects
+    const n=randInt(1,10,rng);const emoji=pick(['🍎','⭐','🌸','🐟','🎈','🦋','🍪'],rng);
+    const vis=emoji.repeat(n);const wrongs=new Set();
+    while(wrongs.size<3){const w=randInt(1,12,rng);if(w!==n)wrongs.add(w);}
+    return{question:`How many ${emoji} do you see?`,visual:vis,answer:String(n),
+      choices:shuffle([String(n),...wrongs].map(String),rng),type:'choice'};}
+  if(level===1){// Match numbers to groups
+    const n=randInt(2,10,rng);const emoji=pick(['🍎','⭐','🌺','🐠','🎈'],rng);
+    const options=[];options.push({text:emoji.repeat(n),val:n});
+    for(let i=0;i<3;i++){let w;do{w=randInt(1,12,rng);}while(w===n||options.some(o=>o.val===w));
+      options.push({text:emoji.repeat(w),val:w});}
+    const shuffled=shuffle(options,rng);
+    return{question:`Which group shows ${n}?`,answer:emoji.repeat(n),
+      choices:shuffled.map(o=>o.text),type:'choice'};}
+  if(level===2){// Number ordering (drag)
+    const start=randInt(1,10,rng);const nums=[];
+    for(let i=0;i<5;i++)nums.push(start+i);
+    return{question:'Put these numbers in order (smallest to biggest)',
+      items:shuffle(nums.map(String),rng),answer:nums.map(String),type:'order'};}
+  if(level===3){// Greater/less than
+    const a=randInt(1,20,rng);let b;do{b=randInt(1,20,rng);}while(b===a);
+    const ans=a>b?`${a} > ${b}`:`${a} < ${b}`;
+    return{question:`Which is correct?`,answer:ans,
+      choices:shuffle([`${a} > ${b}`,`${a} < ${b}`,`${a} = ${b}`,`${b} = ${a}`],rng),type:'choice'};}
+  // level 4: Missing number
+  const start=randInt(1,15,rng);const step=pick([1,2,5],rng);
+  const seq=[];for(let i=0;i<5;i++)seq.push(start+step*i);
+  const miss=randInt(1,3,rng);const ans=seq[miss];seq[miss]='?';
+  const wrongs=new Set();while(wrongs.size<3){const w=randInt(start,start+step*6,rng);if(w!==ans)wrongs.add(w);}
+  return{question:`What number is missing? ${seq.join(', ')}`,answer:String(ans),
+    choices:shuffle([String(ans),...[...wrongs].map(String)],rng),type:'choice'};
+}
+
+function genAddSub(level,rng){
+  if(level<=1){// Addition with visuals then simple
+    const a=randInt(1,level===0?5:9,rng),b=randInt(1,level===0?5:9,rng);
+    const ans=a+b;const emoji=pick(['🍎','⭐','🌸'],rng);
+    const vis=level===0?emoji.repeat(a)+' + '+emoji.repeat(b):'';
+    const wrongs=new Set();while(wrongs.size<3){const w=randInt(Math.max(2,ans-3),ans+4,rng);if(w!==ans&&w>0)wrongs.add(w);}
+    return{question:`${a} + ${b} = ?`,visual:vis,answer:String(ans),
+      choices:shuffle([String(ans),...[...wrongs].map(String)],rng),type:level===0?'choice':'typein'};}
+  if(level===2){// Bigger addition
+    const a=randInt(10,50,rng),b=randInt(5,30,rng),ans=a+b;
+    return{question:`${a} + ${b} = ?`,answer:String(ans),type:'typein'};}
+  if(level===3){// Subtraction
+    const a=randInt(5,20,rng),b=randInt(1,a,rng),ans=a-b;
+    const emoji=pick(['🍎','🍪','🌟'],rng);
+    return{question:`${a} - ${b} = ?`,visual:emoji.repeat(a),answer:String(ans),
+      choices:shuffle([ans,ans+1,ans-1,ans+2].filter(x=>x>=0).map(String).filter((v,i,a)=>a.indexOf(v)===i),rng).slice(0,4),type:'choice'};}
+  // level 4: Mixed
+  const isAdd=rng()>.5;const a=randInt(3,25,rng),b=randInt(1,isAdd?20:a,rng);
+  const ans=isAdd?a+b:a-b;
+  return{question:`${a} ${isAdd?'+':'-'} ${b} = ?`,answer:String(ans),type:'typein'};
+}
+
+function genMultiply(level,rng){
+  if(level===0){// Skip counting
+    const by=pick([2,5,10],rng);const seq=[];
+    for(let i=1;i<=5;i++)seq.push(by*i);const miss=randInt(1,3,rng);
+    const ans=seq[miss];seq[miss]='?';
+    const wrongs=new Set();while(wrongs.size<3){const w=randInt(by,by*7,rng);if(w!==ans)wrongs.add(w);}
+    return{question:`Count by ${by}s: ${seq.join(', ')}`,answer:String(ans),
+      choices:shuffle([String(ans),...[...wrongs].map(String)],rng),type:'choice'};}
+  if(level===1){// Arrays
+    const r=randInt(2,5,rng),c=randInt(2,5,rng),ans=r*c;
+    const emoji=pick(['⭐','🟡','🔵','🟢'],rng);
+    let vis='';for(let i=0;i<r;i++)vis+=(i>0?'<br>':'')+emoji.repeat(c);
+    const wrongs=new Set();while(wrongs.size<3){const w=randInt(Math.max(1,ans-5),ans+5,rng);if(w!==ans)wrongs.add(w);}
+    return{question:`How many ${emoji} are there? (${r} rows × ${c} columns)`,visual:vis,answer:String(ans),
+      choices:shuffle([String(ans),...[...wrongs].map(String)],rng),type:'choice'};}
+  if(level<=3){// Times tables
+    const maxF=level===2?6:12;
+    const a=randInt(2,maxF,rng),b=randInt(2,maxF,rng),ans=a*b;
+    return{question:`${a} × ${b} = ?`,answer:String(ans),type:'typein'};}
+  // level 4: mixed
+  const a=randInt(2,12,rng),b=randInt(2,12,rng);
+  const ops=[{s:'×',r:a*b},{s:'+',r:a+b}];
+  const op=pick(ops,rng);
+  return{question:`${a} ${op.s} ${b} = ?`,answer:String(op.r),type:'typein'};
+}
+
+function genDivision(level,rng){
+  if(level<=1){// Simple division
+    const b=randInt(2,level===0?5:10,rng),ans=randInt(1,level===0?5:10,rng),a=b*ans;
+    if(level===0){const emoji=pick(['🍪','🍎','⭐'],rng);
+      return{question:`Share ${a} ${emoji} equally among ${b} friends. How many does each get?`,
+        visual:emoji.repeat(a),answer:String(ans),
+        choices:shuffle([ans,ans+1,ans-1,ans+2].filter(x=>x>0).map(String).filter((v,i,a)=>a.indexOf(v)===i),rng).slice(0,4),type:'choice'};}
+    return{question:`${a} ÷ ${b} = ?`,answer:String(ans),type:'typein'};}
+  if(level===2){// Mixed operations
+    const ops=['+','-','×','÷'];const op=pick(ops,rng);
+    let a,b,ans;
+    if(op==='÷'){b=randInt(2,10,rng);ans=randInt(1,10,rng);a=b*ans;}
+    else if(op==='×'){a=randInt(2,10,rng);b=randInt(2,10,rng);ans=a*b;}
+    else if(op==='+'){a=randInt(5,50,rng);b=randInt(5,50,rng);ans=a+b;}
+    else{a=randInt(10,50,rng);b=randInt(1,a,rng);ans=a-b;}
+    return{question:`${a} ${op} ${b} = ?`,answer:String(ans),type:'typein'};}
+  if(level===3){// Two-step: a op b op c
+    const a=randInt(2,10,rng),b=randInt(2,5,rng),c=randInt(1,5,rng);
+    const ans=a*b+c;
+    return{question:`(${a} × ${b}) + ${c} = ?`,answer:String(ans),type:'typein'};}
+  // level 4: challenge
+  const b=randInt(3,12,rng),ans=randInt(2,12,rng),a=b*ans;
+  const wrongs=new Set();while(wrongs.size<3){const w=randInt(1,ans+5,rng);if(w!==ans&&w>0)wrongs.add(w);}
+  return{question:`${a} ÷ ${b} = ?`,answer:String(ans),
+    choices:shuffle([String(ans),...[...wrongs].map(String)],rng),type:'choice'};
+}
+
+function genFractions(level,rng){
+  if(level===0){// Name the fraction
+    const den=pick([2,3,4,6,8],rng);const num=randInt(1,den-1,rng);
+    const fractionWord={2:['half','halves'],3:['third','thirds'],4:['quarter','quarters'],
+      6:['sixth','sixths'],8:['eighth','eighths']};
+    const name=num===1?`${num}/${den} (one ${fractionWord[den][0]})`:`${num}/${den} (${['','one','two','three','four','five','six','seven'][num]} ${fractionWord[den][1]})`;
+    const visual=`${'🟦'.repeat(num)}${'⬜'.repeat(den-num)} out of ${den} parts`;
+    const wrongs=[];const opts=[[1,2],[1,3],[1,4],[2,3],[3,4],[2,8],[5,6]].filter(f=>!(f[0]===num&&f[1]===den));
+    const picked=pickN(opts,3,rng);picked.forEach(f=>wrongs.push(`${f[0]}/${f[1]}`));
+    return{question:`What fraction is shaded?`,visual,answer:`${num}/${den}`,
+      choices:shuffle([`${num}/${den}`,...wrongs],rng),type:'choice'};}
+  if(level===1){// Fraction pictures
+    const den=pick([2,4,8],rng);const num=randInt(1,den,rng);
+    const pie='🟦'.repeat(num)+'⬜'.repeat(den-num);
+    return{question:`What fraction does this show? ${pie}`,answer:`${num}/${den}`,
+      choices:shuffle([`${num}/${den}`,`${den-num}/${den}`,`${num}/${den+2}`,`${Math.min(num+1,den)}/${den}`].filter((v,i,a)=>a.indexOf(v)===i),rng).slice(0,4),type:'choice'};}
+  if(level===2){// Compare fractions
+    const den=pick([4,6,8],rng);const a=randInt(1,den-1,rng);let b;
+    do{b=randInt(1,den-1,rng);}while(b===a);
+    const ans=a>b?`${a}/${den} > ${b}/${den}`:`${a}/${den} < ${b}/${den}`;
+    return{question:`Which is correct?`,answer:ans,
+      choices:shuffle([`${a}/${den} > ${b}/${den}`,`${a}/${den} < ${b}/${den}`,
+        `${a}/${den} = ${b}/${den}`,`${b}/${den} > ${den}/${den}`],rng),type:'choice'};}
+  if(level===3){// Add fractions same denominator
+    const den=pick([4,6,8,10],rng);const a=randInt(1,Math.floor(den/2),rng);
+    const b=randInt(1,Math.floor(den/2),rng);const ans=a+b;
+    return{question:`${a}/${den} + ${b}/${den} = ?/${den}`,answer:String(ans),type:'typein'};}
+  // level 4: Word problems
+  const problems=[
+    ()=>{const total=randInt(10,30,rng);const gave=randInt(1,total-1,rng);
+      return{question:`You have ${total} stickers. You give ${gave} to your friend. How many do you have left?`,
+        answer:String(total-gave),type:'typein'};},
+    ()=>{const each=randInt(2,8,rng);const groups=randInt(3,6,rng);
+      return{question:`There are ${groups} bags with ${each} apples in each bag. How many apples are there in total?`,
+        answer:String(each*groups),type:'typein'};},
+    ()=>{const total=randInt(12,36,rng);const share=pick([2,3,4,6],rng);
+      const fixedTotal=total-total%share;
+      return{question:`${fixedTotal} cookies are shared equally among ${share} children. How many does each child get?`,
+        answer:String(fixedTotal/share),type:'typein'};},
+    ()=>{const a=randInt(15,50,rng),b=randInt(10,40,rng);
+      return{question:`A book has ${a+b} pages. You have read ${a} pages. How many pages are left?`,
+        answer:String(b),type:'typein'};}
+  ];
+  return pick(problems,rng)();
+}
+
+function genReadingQuestion(tier,level,qi){
+  const rng=seededRng('reading',tier,level,qi);
+  if(tier===0)return genLetters(level,rng,qi);
+  if(tier===1)return genSightWords(level,rng,qi);
+  if(tier===2)return genVocabulary(level,rng,qi);
+  if(tier===3)return genCompShort(level,rng,qi);
+  return genCompLong(level,rng,qi);
+}
+
+function genLetters(level,rng){
+  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if(level===0){// Match upper to lower
+    const idx=randInt(0,25,rng);const upper=letters[idx];const lower=upper.toLowerCase();
+    const wrongs=new Set();while(wrongs.size<3){const w=letters[randInt(0,25,rng)].toLowerCase();if(w!==lower)wrongs.add(w);}
+    return{question:`Which lowercase letter matches "${upper}"?`,answer:lower,
+      choices:shuffle([lower,...wrongs],rng),type:'choice'};}
+  if(level===1){// Identify the letter
+    const idx=randInt(0,25,rng);const letter=letters[idx];
+    const wrongs=new Set();while(wrongs.size<3){const w=letters[randInt(0,25,rng)];if(w!==letter)wrongs.add(w);}
+    return{question:`Which letter is this?`,visual:letter,answer:letter,
+      choices:shuffle([letter,...wrongs],rng),type:'choice'};}
+  if(level===2){// Beginning sounds
+    const wordStarts={A:'apple',B:'ball',C:'cat',D:'dog',E:'egg',F:'fish',G:'goat',H:'hat',
+      I:'igloo',J:'jam',K:'kite',L:'lamp',M:'moon',N:'nest',O:'owl',P:'pen',R:'ring',S:'sun',T:'tree',W:'web'};
+    const keys=Object.keys(wordStarts);const key=pick(keys,rng);
+    const word=wordStarts[key];
+    const wrongs=pickN(keys.filter(k=>k!==key),3,rng);
+    return{question:`What letter does "${word}" start with?`,answer:key,
+      choices:shuffle([key,...wrongs],rng),type:'choice'};}
+  if(level===3){// Rhyming
+    const families=Object.keys(RHYME_FAMILIES);const fam=pick(families,rng);
+    const words=RHYME_FAMILIES[fam];const target=pick(words,rng);
+    const match=pick(words.filter(w=>w!==target),rng);
+    const otherFams=families.filter(f=>f!==fam);
+    const wrongs=pickN(otherFams,3,rng).map(f=>pick(RHYME_FAMILIES[f],rng));
+    return{question:`Which word rhymes with "${target}"?`,answer:match,
+      choices:shuffle([match,...wrongs],rng),type:'choice'};}
+  // level 4: Mix
+  const types=[0,1,2,3];return genLetters(pick(types,rng),rng);
+}
+
+function genSightWords(level,rng,qi){
+  const wordPool=level<=1?SIGHT_WORDS[0]:level===2?SIGHT_WORDS[1]:SIGHT_WORDS[2];
+  const allWords=[...SIGHT_WORDS[0],...SIGHT_WORDS[1],...SIGHT_WORDS[2]];
+  if(level===0){// Flash word recognition
+    const word=pick(wordPool,rng);
+    const wrongs=pickN(allWords.filter(w=>w!==word),3,rng);
+    return{question:`Find the word:`,visual:word.toUpperCase(),answer:word,
+      choices:shuffle([word,...wrongs],rng),type:'choice'};}
+  if(level===1){// Which word matches
+    const words=pickN(wordPool,4,rng);const target=words[0];
+    return{question:`Tap the word "${target}"`,answer:target,
+      choices:shuffle(words,rng),type:'choice'};}
+  if(level===2){// Fill in missing word
+    const sentences=[
+      ['I','go','to','the','store'],['She','can','see','the','dog'],
+      ['He','is','a','good','boy'],['We','like','to','play','games'],
+      ['They','are','in','the','park'],['It','was','a','big','cat'],
+      ['You','and','I','are','friends'],['She','said','it','was','fun'],
+      ['He','had','one','more','turn'],['We','have','not','been','there']
+    ];
+    const sent=pick(sentences,rng);const idx=randInt(0,sent.length-1,rng);
+    const missing=sent[idx];const display=[...sent];display[idx]='____';
+    const wrongs=pickN(allWords.filter(w=>w!==missing),3,rng);
+    return{question:`Fill in the blank: "${display.join(' ')}"`,answer:missing,
+      choices:shuffle([missing,...wrongs],rng),type:'choice'};}
+  if(level===3){// Alphabetical order
+    const words=pickN(wordPool,4,rng);const sorted=[...words].sort();
+    return{question:'Put these words in ABC order',items:shuffle(words,rng),answer:sorted,type:'order'};}
+  // level 4: speed mix
+  return genSightWords(randInt(0,2,rng),rng,qi);
+}
+
+function genVocabulary(level,rng){
+  if(level===0){// Sentence completion
+    const sentences=[
+      {s:'The cat sat on the ____.',a:'mat',w:['bat','sky','run']},
+      {s:'I like to ____ books.',a:'read',w:['eat','throw','drive']},
+      {s:'The ____ is shining bright.',a:'sun',w:['moon','car','book']},
+      {s:'She ____ to the store.',a:'walked',w:['flew','slept','grew']},
+      {s:'The bird can ____ in the sky.',a:'fly',w:['swim','dig','cook']},
+      {s:'We eat ____ for breakfast.',a:'cereal',w:['dinner','stones','pencils']},
+      {s:'The flowers grow in the ____.',a:'garden',w:['oven','ceiling','phone']},
+      {s:'He ____ the ball to his friend.',a:'threw',w:['ate','read','slept']},
+      {s:'It is very ____ outside today.',a:'cold',w:['purple','square','loud']},
+      {s:'The dog likes to ____ in the park.',a:'play',w:['cook','write','drive']}
+    ];
+    const item=pick(sentences,rng);
+    return{question:item.s,answer:item.a,choices:shuffle([item.a,...item.w],rng),type:'choice'};}
+  if(level===1){// Synonyms
+    const pair=pick(SYNONYMS,rng);const target=pair[0];const match=pair[1];
+    const wrongs=pickN(SYNONYMS.filter(p=>p!==pair).map(p=>pick(p,rng)),3,rng);
+    return{question:`Which word means the same as "${target}"?`,answer:match,
+      choices:shuffle([match,...wrongs],rng),type:'choice'};}
+  if(level===2){// Antonyms
+    const pair=pick(ANTONYMS,rng);const target=pair[0];const match=pair[1];
+    const wrongs=pickN(ANTONYMS.filter(p=>p!==pair).map(p=>pick(p,rng)),3,rng);
+    return{question:`Which word means the OPPOSITE of "${target}"?`,answer:match,
+      choices:shuffle([match,...wrongs],rng),type:'choice'};}
+  if(level===3){// Context clues
+    const items=[
+      {s:'The puppy was so tiny it fit in my hand. Tiny means:',a:'very small',w:['very big','very fast','very loud']},
+      {s:'She was furious when her brother broke her toy. Furious means:',a:'very angry',w:['very happy','very tired','very quiet']},
+      {s:'The enormous elephant walked through the jungle. Enormous means:',a:'very large',w:['very small','very fast','very old']},
+      {s:'He was exhausted after running the race. Exhausted means:',a:'very tired',w:['very happy','very hungry','very cold']},
+      {s:'The brilliant student always got good grades. Brilliant means:',a:'very smart',w:['very tall','very funny','very quiet']},
+      {s:'The ancient castle was hundreds of years old. Ancient means:',a:'very old',w:['very new','very small','very pretty']},
+      {s:'She was delighted to receive a birthday gift. Delighted means:',a:'very happy',w:['very sad','very scared','very confused']},
+      {s:'The frigid wind made everyone shiver. Frigid means:',a:'very cold',w:['very hot','very strong','very gentle']}
+    ];
+    const item=pick(items,rng);
+    return{question:item.s,answer:item.a,choices:shuffle([item.a,...item.w],rng),type:'choice'};}
+  // level 4: mix
+  return genVocabulary(randInt(0,3,rng),rng);
+}
+
+function genCompShort(level,rng,qi){
+  const passIdx=(qi+level*3)%PASSAGES.length;
+  const passage=PASSAGES[passIdx];
+  const qIdx=qi%passage.questions.length;
+  const pq=passage.questions[qIdx];
+  return{question:pq.q,passage:passage.text,answer:pq.a,
+    choices:shuffle([pq.a,...pq.wrong],rng),type:'passage'};
+}
+
+function genCompLong(level,rng,qi){
+  // Use later passages for harder content
+  const offset=Math.floor(PASSAGES.length/2);
+  const passIdx=(qi+level*2+offset)%PASSAGES.length;
+  const passage=PASSAGES[passIdx];
+  const qIdx=qi%passage.questions.length;
+  const pq=passage.questions[qIdx];
+  return{question:pq.q,passage:passage.text,answer:pq.a,
+    choices:shuffle([pq.a,...pq.wrong],rng),type:'passage'};
+}
+
+// ========== GAME MECHANICS RENDERERS ==========
+function renderChoiceQuestion(container,q,onAnswer){
+  const area=el('div','question-area');
+  if(q.visual){const vis=el('div','question-visual');vis.innerHTML=q.visual;area.appendChild(vis);}
+  if(q.passage){const box=el('div','passage-box',q.passage);area.appendChild(box);}
+  area.appendChild(el('div','question-text',q.question));
+  const choices=el('div','choices');
+  q.choices.forEach(c=>{
+    const btn=el('button','choice-btn',c);
+    btn.addEventListener('click',()=>{
+      if(btn.classList.contains('disabled'))return;
+      choices.querySelectorAll('.choice-btn').forEach(b=>b.classList.add('disabled'));
+      const correct=c===q.answer;
+      btn.classList.add(correct?'correct':'wrong');
+      if(!correct)choices.querySelectorAll('.choice-btn').forEach(b=>{if(b.innerHTML===q.answer)b.classList.add('correct');});
+      Audio.play(correct?'correct':'wrong');
+      showFeedback(correct);
+      setTimeout(()=>onAnswer(correct),1000);
+    });
+    choices.appendChild(btn);
+  });
+  area.appendChild(choices);container.appendChild(area);
+}
+
+function renderTypeinQuestion(container,q,onAnswer){
+  const area=el('div','question-area');
+  if(q.visual){const vis=el('div','question-visual');vis.innerHTML=q.visual;area.appendChild(vis);}
+  area.appendChild(el('div','question-text',q.question));
+  const input=document.createElement('input');input.type='text';input.className='type-input';
+  input.inputMode='numeric';input.autocomplete='off';input.setAttribute('autocorrect','off');
+  area.appendChild(input);
+  const submit=el('button','btn btn-primary type-submit','Check Answer');
+  const doCheck=()=>{
+    const val=input.value.trim();if(!val)return;
+    const correct=val===q.answer;
+    input.style.borderColor=correct?'var(--success)':'var(--danger)';
+    submit.disabled=true;Audio.play(correct?'correct':'wrong');
+    showFeedback(correct);
+    if(!correct){input.value=q.answer;input.style.color='var(--success)';}
+    setTimeout(()=>onAnswer(correct),1200);};
+  submit.addEventListener('click',doCheck);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')doCheck();});
+  area.appendChild(submit);container.appendChild(area);
+  setTimeout(()=>input.focus(),100);
+}
+
+function renderOrderQuestion(container,q,onAnswer){
+  const area=el('div','question-area');
+  area.appendChild(el('div','question-text',q.question));
+  const zones=el('div','drop-zones');
+  const placed=new Array(q.answer.length).fill(null);
+  for(let i=0;i<q.answer.length;i++){const z=el('div','drop-zone');z.dataset.idx=i;zones.appendChild(z);}
+  area.appendChild(zones);
+  const items=el('div','drag-container');
+  q.items.forEach(item=>{
+    const d=el('div','drag-item',item);d.dataset.val=item;
+    d.addEventListener('click',()=>{
+      if(d.classList.contains('placed'))return;
+      const emptyIdx=placed.indexOf(null);
+      if(emptyIdx===-1)return;
+      placed[emptyIdx]=item;d.classList.add('placed');
+      const zone=zones.children[emptyIdx];zone.textContent=item;zone.classList.add('filled');
+      Audio.play('click');
+      // Check if all placed
+      if(!placed.includes(null)){
+        const correct=placed.every((v,i)=>v===q.answer[i]);
+        Audio.play(correct?'correct':'wrong');showFeedback(correct);
+        setTimeout(()=>onAnswer(correct),1200);}
+    });
+    items.appendChild(d);});
+  // Allow clicking zone to remove
+  zones.querySelectorAll('.drop-zone').forEach(z=>{
+    z.addEventListener('click',()=>{
+      const idx=parseInt(z.dataset.idx);if(placed[idx]===null)return;
+      const val=placed[idx];placed[idx]=null;z.textContent='';z.classList.remove('filled');
+      items.querySelectorAll('.drag-item').forEach(d=>{if(d.dataset.val===val&&d.classList.contains('placed')){d.classList.remove('placed');}});
+    });});
+  area.appendChild(items);container.appendChild(area);
+}
+
+// ========== SCREEN RENDERERS ==========
+
+// --- TITLE SCREEN ---
+function renderTitle(app){
+  const screen=el('div','screen title-screen');
+  // Stars background
+  const starsDiv=el('div','title-stars');
+  for(let i=0;i<50;i++){const s=el('div','title-star');
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*70}%;--d:${2+Math.random()*3}s;animation-delay:${Math.random()*3}s;`;
+    starsDiv.appendChild(s);}
+  screen.appendChild(starsDiv);
+  const content=el('div','',`
+    <h1>Adventure Academy</h1>
+    <p class="subtitle">Learn, Play, and Explore!</p>
+  `);content.style.cssText='z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px;';
+  const input=document.createElement('input');input.type='text';input.className='name-input';
+  input.placeholder='Enter your name...';input.maxLength=20;
+  if(State.get('playerName'))input.value=State.get('playerName');
+  content.appendChild(input);
+  const btn=el('button','btn btn-star btn-lg','🚀 Start Adventure!');
+  btn.addEventListener('click',()=>{
+    const name=input.value.trim()||'Explorer';
+    State.set('playerName',name);State.save();
+    Audio.play('fanfare');Router.navigate('hub');});
+  content.appendChild(btn);
+  screen.appendChild(content);app.appendChild(screen);
+  setTimeout(()=>input.focus(),300);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')btn.click();});
+}
+
+// --- HUB SCREEN ---
+function renderHub(app){
+  const screen=el('div','screen hub-screen');
+  // Top bar
+  const topbar=el('div','topbar');
+  topbar.innerHTML=`
+    <div class="player-info">
+      <div class="avatar-small">😊</div>
+      <span>${State.get('playerName')}</span>
+    </div>
+    <div class="star-count">⭐ ${State.get('totalStars')}</div>`;
+  const trophyBtn=el('button','btn btn-round btn-ghost','🏆');
+  trophyBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('trophies');});
+  topbar.appendChild(trophyBtn);
+  screen.appendChild(topbar);
+
+  // Map area
+  const map=el('div','hub-map');
+
+  // Sun
+  map.appendChild(el('div','hub-sun'));
+
+  // Clouds
+  for(let i=0;i<4;i++){const cloud=el('div','hub-cloud');
+    const w=60+Math.random()*80;
+    cloud.style.cssText=`width:${w}px;height:${w*0.5}px;top:${5+Math.random()*25}%;--d:${20+Math.random()*30}s;animation-delay:${-Math.random()*30}s;`;
+    // Cloud puffs
+    const p1=el('div','');p1.style.cssText=`position:absolute;background:#fff;border-radius:50%;width:${w*0.6}px;height:${w*0.6}px;top:-${w*0.2}px;left:${w*0.2}px;`;
+    const p2=el('div','');p2.style.cssText=`position:absolute;background:#fff;border-radius:50%;width:${w*0.4}px;height:${w*0.4}px;top:-${w*0.1}px;left:${w*0.05}px;`;
+    cloud.appendChild(p1);cloud.appendChild(p2);
+    map.appendChild(cloud);}
+
+  // Trees
+  const treePositions=[[48,70],[50,55],[52,68],[3,80],[96,75],[45,85]];
+  treePositions.forEach(([x,y])=>{
+    const tree=el('div','hub-tree');tree.style.cssText=`left:${x}%;bottom:${100-y}%;`;
+    tree.innerHTML='<div class="leaves"></div><div class="trunk"></div>';map.appendChild(tree);});
+
+  // Math Mountain
+  const mtn=el('div','hub-mountain');
+  mtn.innerHTML=`
+    <div class="mountain-shape">
+      <div class="mountain-peak2"></div>
+      <div class="mountain-peak"></div>
+      <div class="mountain-snow"></div>
+    </div>
+    <div class="area-label"><span class="area-emoji">⛰️</span>Math Mountain</div>`;
+  mtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('path',{path:'math'});});
+  map.appendChild(mtn);
+
+  // Reading River
+  const river=el('div','hub-river');
+  river.innerHTML=`
+    <div class="river-bg"></div>
+    <div class="river-shimmer"></div>
+    <div class="area-label"><span class="area-emoji">📚</span>Reading River</div>`;
+  river.addEventListener('click',()=>{Audio.play('click');Router.navigate('path',{path:'reading'});});
+  map.appendChild(river);
+
+  screen.appendChild(map);
+
+  // Bottom bar with quick access
+  const bottom=el('div','hub-bottom');
+  const soundBtn=el('button','btn btn-round btn-ghost',State.get('soundEnabled')?'🔊':'🔇');
+  soundBtn.addEventListener('click',()=>{
+    State.set('soundEnabled',!State.get('soundEnabled'));
+    soundBtn.textContent=State.get('soundEnabled')?'🔊':'🔇';});
+  bottom.appendChild(soundBtn);
+  screen.appendChild(bottom);
+
+  app.appendChild(screen);
+}
+
+// --- PATH SCREEN (TIER MAP) ---
+function renderPath(app,{path}){
+  const screen=el('div',`screen path-screen ${path}`);
+  const tiers=path==='math'?MATH_TIERS:READ_TIERS;
+
+  // Top bar
+  const topbar=el('div','topbar');
+  const backBtn=el('button','back-btn','← Back');
+  backBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('hub');});
+  topbar.appendChild(backBtn);
+  topbar.innerHTML+=`<div class="player-info"><span style="font-family:var(--font-title)">${path==='math'?'⛰️ Math Mountain':'📚 Reading River'}</span></div>`;
+  const starDiv=el('div','star-count',`⭐ ${State.get('totalStars')}`);
+  topbar.appendChild(starDiv);
+  screen.appendChild(topbar);
+
+  // Tier list
+  const list=el('div','tier-list');
+  tiers.forEach((tier,i)=>{
+    const unlocked=State.isTierUnlocked(path,i);
+    const stars=State.getStarsForTier(path,i);
+    const maxStars=LEVELS_PER_TIER*3;
+    const allDone=State.get('progress')[path][i].every(s=>s>0);
+    const isCurrent=unlocked&&!allDone;
+
+    if(i>0){const conn=el('div',`tier-connector${unlocked?' unlocked':''}`);list.appendChild(conn);}
+
+    const node=el('div',`tier-node${unlocked?'':' locked'}${isCurrent?' current':''}`);
+    node.style.background=`linear-gradient(135deg,${tier.colors[0]},${tier.colors[1]})`;
+
+    const icon=el('div','tier-icon',unlocked?tier.icon:'🔒');
+    icon.style.background='rgba(255,255,255,0.2)';
+    node.appendChild(icon);
+
+    const info=el('div','tier-info');
+    info.innerHTML=`<div class="tier-name">${tier.name}</div>
+      <div class="tier-desc">${tier.desc}</div>
+      <div class="tier-stars">${starHTML(stars,maxStars)} <span style="color:rgba(255,255,255,.7);font-size:.75rem;margin-left:4px">${stars}/${maxStars}</span></div>`;
+    node.appendChild(info);
+
+    if(unlocked){node.addEventListener('click',()=>{Audio.play('click');
+      Router.navigate('levels',{path,tier:i});});}
+    list.appendChild(node);
+  });
+  screen.appendChild(list);app.appendChild(screen);
+}
+
+// --- LEVEL SELECT SCREEN ---
+function renderLevels(app,{path,tier}){
+  const screen=el('div',`screen level-screen ${path}`);
+  const tierData=path==='math'?MATH_TIERS[tier]:READ_TIERS[tier];
+  const levelNames=path==='math'?MATH_LEVEL_NAMES[tier]:READ_LEVEL_NAMES[tier];
+  const colors=tierData.colors;
+
+  const topbar=el('div','topbar');
+  const backBtn=el('button','back-btn','← Back');
+  backBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('path',{path});});
+  topbar.appendChild(backBtn);
+  topbar.innerHTML+=`<div class="player-info"><span style="font-family:var(--font-title)">${tierData.icon} ${tierData.name}</span></div>`;
+  screen.appendChild(topbar);
+
+  const grid=el('div','level-grid');
+  for(let i=0;i<LEVELS_PER_TIER;i++){
+    const unlocked=State.isLevelUnlocked(path,tier,i);
+    const stars=State.get('progress')[path][tier][i];
+    const allPrev=i===0||State.get('progress')[path][tier][i-1]>0;
+    const isCurrent=unlocked&&stars===0;
+
+    const card=el('div',`level-card${unlocked?'':' locked'}${isCurrent?' current':''}`);
+    card.style.background=unlocked?`linear-gradient(135deg,${colors[0]},${colors[1]})`:'';
+
+    if(unlocked){
+      card.innerHTML=`<div class="level-num">${i+1}</div>
+        <div class="level-title">${levelNames[i]}</div>
+        <div class="level-stars">${starHTML(stars)}</div>`;
+      card.addEventListener('click',()=>{Audio.play('click');
+        Router.navigate('gameplay',{path,tier,level:i});});
+    }else{
+      card.innerHTML='<div class="lock-big">🔒</div>';
+    }
+    grid.appendChild(card);
+  }
+  screen.appendChild(grid);app.appendChild(screen);
+}
+
+// --- GAMEPLAY SCREEN ---
+function renderGameplay(app,{path,tier,level}){
+  const screen=el('div',`screen game-screen ${path}`);
+  const tierData=path==='math'?MATH_TIERS[tier]:READ_TIERS[tier];
+  const levelName=path==='math'?MATH_LEVEL_NAMES[tier][level]:READ_LEVEL_NAMES[tier][level];
+
+  // Top bar
+  const topbar=el('div','topbar');
+  const backBtn=el('button','back-btn','✕');
+  backBtn.addEventListener('click',()=>{
+    Audio.play('click');Router.navigate('levels',{path,tier});});
+  topbar.appendChild(backBtn);
+  topbar.innerHTML+=`<div class="player-info"><span style="font-family:var(--font-title)">${tierData.icon} ${levelName}</span></div>`;
+  screen.appendChild(topbar);
+
+  // Progress bar
+  const progWrap=el('div','',`<div class="progress-label" id="prog-label">Question 1 of ${QUESTIONS_PER_LEVEL}</div>`);
+  progWrap.style.cssText='padding:8px 20px;';
+  const track=el('div','progress-track');
+  const fill=el('div','progress-fill');fill.id='prog-fill';fill.style.width='0%';
+  track.appendChild(fill);progWrap.appendChild(track);screen.appendChild(progWrap);
+
+  // Content area
+  const content=el('div','game-content');content.id='game-content';
+  screen.appendChild(content);app.appendChild(screen);
+
+  // Game loop
+  let current=0,correctCount=0;
+  function showQuestion(){
+    content.innerHTML='';
+    document.getElementById('prog-fill').style.width=`${(current/QUESTIONS_PER_LEVEL)*100}%`;
+    document.getElementById('prog-label').textContent=`Question ${current+1} of ${QUESTIONS_PER_LEVEL}`;
+
+    const q=path==='math'?genMathQuestion(tier,level,current):genReadingQuestion(tier,level,current);
+
+    const handleAnswer=(correct)=>{
+      if(correct)correctCount++;current++;
+      if(current>=QUESTIONS_PER_LEVEL){
+        document.getElementById('prog-fill').style.width='100%';
+        const pct=correctCount/QUESTIONS_PER_LEVEL;
+        const stars=pct>=0.9?3:pct>=0.7?2:pct>=0.375?1:0;
+        setTimeout(()=>Router.navigate('results',{path,tier,level,stars,correctCount,total:QUESTIONS_PER_LEVEL}),600);
+      }else{setTimeout(showQuestion,600);}
+    };
+
+    if(q.type==='order')renderOrderQuestion(content,q,handleAnswer);
+    else if(q.type==='typein')renderTypeinQuestion(content,q,handleAnswer);
+    else renderChoiceQuestion(content,q,handleAnswer);// choice or passage
+  }
+  showQuestion();
+}
+
+// --- RESULTS SCREEN ---
+function renderResults(app,{path,tier,level,stars,correctCount,total}){
+  const screen=el('div','screen results-screen');
+
+  // Save progress
+  const newCollectible=State.completeLevel(path,tier,level,stars);
+
+  // Confetti for 3 stars or tier completion
+  if(stars>=3)setTimeout(showConfetti,500);
+
+  const title=stars>=3?'Amazing! 🌟':stars>=2?'Great Job! 🎉':stars>=1?'Good Work! 👍':'Keep Trying! 💪';
+  screen.innerHTML=`
+    <div class="results-title">${title}</div>
+    <div class="results-subtitle">${correctCount} out of ${total} correct</div>
+    <div class="results-stars">
+      <div class="result-star ${stars>=1?'':'empty'}">⭐</div>
+      <div class="result-star ${stars>=2?'':'empty'}">⭐</div>
+      <div class="result-star ${stars>=3?'':'empty'}">⭐</div>
+    </div>`;
+
+  stars>=1&&setTimeout(()=>Audio.play('star'),400);
+  stars>=2&&setTimeout(()=>Audio.play('star'),800);
+  stars>=3&&setTimeout(()=>Audio.play('star'),1200);
+
+  if(newCollectible){
+    const reveal=el('div','collectible-reveal');
+    reveal.innerHTML=`<span class="collectible-emoji">${newCollectible.emoji}</span>
+      <div style="font-family:var(--font-title);font-size:1.2rem">New Friend Unlocked!</div>
+      <div style="margin-top:4px">${newCollectible.name}</div>`;
+    screen.appendChild(reveal);
+    setTimeout(()=>Audio.play('unlock'),1500);
+  }
+
+  const btns=el('div','results-buttons');
+
+  // Replay
+  const replayBtn=el('button','btn btn-ghost','🔄 Replay');
+  replayBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('gameplay',{path,tier,level});});
+  btns.appendChild(replayBtn);
+
+  // Next level
+  const nextLevel=level+1;const nextTier=tier;
+  let hasNext=false;
+  if(stars>=1){
+    if(nextLevel<LEVELS_PER_TIER){hasNext=true;
+      const nextBtn=el('button','btn btn-primary','Next Level ➜');
+      nextBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('gameplay',{path,tier:nextTier,level:nextLevel});});
+      btns.appendChild(nextBtn);
+    }else if(tier+1<TIERS_PER_PATH&&State.isTierUnlocked(path,tier+1)){
+      hasNext=true;
+      const nextBtn=el('button','btn btn-primary','Next Tier ➜');
+      nextBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('levels',{path,tier:tier+1});});
+      btns.appendChild(nextBtn);
+    }
+  }
+
+  // Back to map
+  const mapBtn=el('button','btn btn-ghost','🗺️ Back to Map');
+  mapBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('hub');});
+  btns.appendChild(mapBtn);
+
+  screen.appendChild(btns);
+  setTimeout(()=>Audio.play('fanfare'),200);
+  app.appendChild(screen);
+}
+
+// --- TROPHY ROOM ---
+function renderTrophies(app){
+  const screen=el('div','screen trophy-screen');
+  const topbar=el('div','topbar');
+  const backBtn=el('button','back-btn','← Back');
+  backBtn.addEventListener('click',()=>{Audio.play('click');Router.navigate('hub');});
+  topbar.appendChild(backBtn);
+  topbar.innerHTML+=`<div class="player-info"><span style="font-family:var(--font-title)">🏆 Trophy Room</span></div>`;
+  const starDiv=el('div','star-count',`⭐ ${State.get('totalStars')}`);
+  topbar.appendChild(starDiv);
+  screen.appendChild(topbar);
+
+  const info=el('div','',`<div style="text-align:center;color:rgba(255,255,255,0.7);padding:12px;font-weight:700">
+    ${State.get('collectibles').length} of ${COLLECTIBLES.length} friends collected</div>`);
+  screen.appendChild(info);
+
+  const grid=el('div','trophy-grid');
+  COLLECTIBLES.forEach(c=>{
+    const collected=State.get('collectibles').includes(c.id);
+    const card=el('div',`trophy-card ${collected?'collected':'locked'}`);
+    card.innerHTML=`<div class="trophy-emoji">${c.emoji}</div>
+      <div class="trophy-name">${collected?c.name:'???'}</div>`;
+    grid.appendChild(card);});
+  screen.appendChild(grid);app.appendChild(screen);
+}
+
+// ========== INITIALIZATION ==========
+document.addEventListener('DOMContentLoaded',()=>{
+  State.init();
+  Router.register('title',renderTitle);
+  Router.register('hub',renderHub);
+  Router.register('path',renderPath);
+  Router.register('levels',renderLevels);
+  Router.register('gameplay',renderGameplay);
+  Router.register('results',renderResults);
+  Router.register('trophies',renderTrophies);
+
+  // Init audio on first interaction
+  document.addEventListener('pointerdown',()=>Audio.init(),{once:true});
+
+  Router.navigate(State.get('currentScreen')||'title',State.get('screenParams')||{});
+});
+</script>
+</body>
+</html>

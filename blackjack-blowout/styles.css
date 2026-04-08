@@ -237,6 +237,21 @@ button { font: inherit; }
 .cards-player {
   transform-origin: center center;
 }
+.cards-player .player-hand {
+  width: 100%;
+}
+.cards-player .hand-cards {
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.cards-player .hand-cards .card {
+  flex: 0 0 auto;
+}
 .mini-campaign {
   font-size: .58rem;
   color: var(--gold-hi);

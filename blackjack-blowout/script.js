@@ -38,8 +38,11 @@ const els = {
 let audioEnabled = true;
 let audioCtx = null;
 let state = loadGame() || makeFreshState();
+let firstGestureBound = false;
 coerceState(state);
 render();
+
+bindAudioUnlock();
 
 els.chipRow.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-chip]');
@@ -354,6 +357,8 @@ function renderDealer() {
   const hideHole = state.status === 'playerTurn' || state.status === 'initialDeal';
   state.dealer.cards.forEach((card, index) => {
     const node = createCardNode(card, hideHole && index === 1);
+    node.classList.add('dealing');
+    node.style.animationDelay = `${index * 90}ms`;
     if (!hideHole && index === 1) node.classList.add('revealing');
     els.dealerHand.appendChild(node);
   });
@@ -391,7 +396,7 @@ function renderPlayerHands() {
     <div class="hand-cards"></div>
   `;
   const cardsEl = wrap.querySelector('.hand-cards');
-  hand.cards.forEach(card => { const n = createCardNode(card, false); n.classList.add('dealing'); cardsEl.appendChild(n); });
+  hand.cards.forEach((card, index) => { const n = createCardNode(card, false); n.classList.add('dealing'); n.style.animationDelay = `${index * 90}ms`; cardsEl.appendChild(n); });
   els.playerHands.appendChild(wrap);
   fitCards(cardsEl);
 }
@@ -479,8 +484,19 @@ function persistAndRender() { saveGame(); render(); }
 function saveGame() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function loadGame() { try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }
 
-function toggleSound() { audioEnabled = !audioEnabled; els.soundToggle.textContent = `Sound ${audioEnabled ? 'On' : 'Off'}`; }
-function ensureAudio() { if (!audioEnabled) return null; if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+function toggleSound() { audioEnabled = !audioEnabled; els.soundToggle.textContent = `Sound ${audioEnabled ? 'On' : 'Off'}`; if (audioEnabled) unlockAudio(); }
+function ensureAudio() { if (!audioEnabled) return null; if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); return audioCtx; }
+function bindAudioUnlock() {
+  if (firstGestureBound) return;
+  firstGestureBound = true;
+  ['pointerdown','touchstart','click'].forEach(evt => window.addEventListener(evt, unlockAudio, { once: true, passive: true }));
+}
+function unlockAudio() {
+  if (!audioEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+}
 function playTone(freq, duration, type = 'sine', gainAmount = 0.06, glideTo = null) {
   const ctx = ensureAudio(); if (!ctx) return;
   const osc = ctx.createOscillator(); const gain = ctx.createGain();

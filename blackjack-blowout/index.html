@@ -10,71 +10,76 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="game-shell">
     <div class="ambient-bg"></div>
-    <main class="game-layout">
-      <header class="hud-bar glass-panel">
-        <div class="hud-chip brand-chip">BLACKJACK BLOWOUT</div>
-        <div class="hud-chip"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
-        <div class="hud-chip compact"><span>Shoe</span><strong id="shoeCountMobile">104</strong></div>
-        <button class="hud-chip sound-chip" id="soundToggle" aria-label="Toggle sound">Sound On</button>
+    <main class="game">
+      <header class="topbar glass-panel">
+        <div class="top-pill brand-pill">BLACKJACK BLOWOUT</div>
+        <div class="top-pill"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
+        <div class="top-pill"><span>Shoe</span><strong id="shoeCountMobile">104</strong></div>
+        <button class="top-pill sound-pill" id="soundToggle">Sound On</button>
       </header>
 
-      <section class="table-frame">
-        <div class="table-surface" id="tableSurface">
-          <img class="table-hero" src="./assets/generated/02-table-hero-bg.png" alt="Luxury blackjack table" />
-          <div class="table-overlay"></div>
+      <section class="table glass-panel" id="tableSurface">
+        <img class="table-hero" src="./assets/generated/02-table-hero-bg.png" alt="Luxury blackjack table" />
+        <div class="table-overlay"></div>
 
-          <div class="table-grid">
-            <section class="dealer-zone zone">
-              <div class="zone-topline">
-                <div class="zone-label-wrap">
-                  <span class="label">Dealer</span>
-                  <strong id="dealerTotal">--</strong>
-                </div>
-                <div class="shoe-stack" id="shoeStack" title="Shoe"></div>
-              </div>
-              <div class="hand-row" id="dealerHand"></div>
-            </section>
-
-            <section class="center-zone">
-              <div class="status-banner glass-panel" id="statusBanner">Place your bet to begin.</div>
-              <div class="bet-circle" id="betCircle">
-                <span>Bet</span>
-                <strong id="currentBetValue">$0</strong>
-                <small id="roundPhaseLabel">Betting</small>
-              </div>
-            </section>
-
-            <section class="player-zone zone">
-              <div class="zone-topline">
-                <div class="zone-label-wrap">
-                  <span class="label">Player</span>
-                  <strong id="playerSummary">0 hands</strong>
-                </div>
-                <div class="mini-campaign" id="campaignState">Target $1M</div>
-              </div>
-              <div class="hands-grid" id="playerHands"></div>
-            </section>
+        <section class="hand-area dealer-area">
+          <div class="hand-head">
+            <span>Dealer</span>
+            <strong id="dealerTotal">--</strong>
+            <div class="shoe-stack" id="shoeStack" title="Shoe"></div>
           </div>
+          <div class="cards" id="dealerHand"></div>
+        </section>
+
+        <div class="center-overlay">
+          <div class="bet-pill" id="betCircle">
+            <span>Bet</span>
+            <strong id="currentBetValue">$0</strong>
+            <small id="roundPhaseLabel">Betting</small>
+          </div>
+          <div class="status-toast" id="statusBanner">Place your bet to begin.</div>
         </div>
+
+        <section class="hand-area player-area">
+          <div class="hand-head">
+            <span>You</span>
+            <strong id="playerSummary">0 hands</strong>
+            <div class="mini-campaign" id="campaignState">Target $1M</div>
+          </div>
+          <div class="player-hand-tabs" id="playerHandTabs"></div>
+          <div class="cards cards-player" id="playerHands"></div>
+        </section>
       </section>
 
-      <footer class="control-dock glass-panel">
-        <div class="controls-meta" id="tableMessage">Luxury rules. Clean play. Big swings.</div>
-        <div class="chip-row" id="chipRow">
-          <button class="chip-btn chip-1000" data-chip="1000">$1K</button>
-          <button class="chip-btn chip-2500" data-chip="2500">$2.5K</button>
-          <button class="chip-btn chip-5000" data-chip="5000">$5K</button>
-          <button class="ghost-btn" id="clearBetBtn">Clear</button>
-          <button class="ghost-btn" id="rebetBtn">Rebet</button>
-          <button class="primary-btn" id="dealBtn">Deal</button>
+      <footer class="dock glass-panel">
+        <div class="dock-top">
+          <button class="mode-btn active" id="betModeBtn">Bet</button>
+          <button class="mode-btn" id="playModeBtn">Play</button>
+          <div class="dock-message" id="tableMessage">Luxury rules. Clean play.</div>
         </div>
-        <div class="action-row">
-          <button class="action-btn" id="hitBtn">Hit</button>
-          <button class="action-btn" id="standBtn">Stand</button>
-          <button class="action-btn" id="doubleBtn">Double</button>
-          <button class="action-btn" id="splitBtn">Split</button>
+
+        <div class="dock-panel dock-panel-bet active" id="betPanel">
+          <div class="chip-grid" id="chipRow">
+            <button class="chip-btn" data-chip="1000">$1K</button>
+            <button class="chip-btn" data-chip="2500">$2.5K</button>
+            <button class="chip-btn" data-chip="5000">$5K</button>
+          </div>
+          <div class="bet-actions">
+            <button class="ghost-btn" id="clearBetBtn">Clear</button>
+            <button class="primary-btn" id="dealBtn">Deal</button>
+            <button class="ghost-btn" id="rebetBtn">Rebet</button>
+          </div>
+        </div>
+
+        <div class="dock-panel dock-panel-play" id="playPanel">
+          <div class="action-grid">
+            <button class="action-btn" id="hitBtn">Hit</button>
+            <button class="action-btn" id="standBtn">Stand</button>
+            <button class="action-btn" id="doubleBtn">Double</button>
+            <button class="action-btn" id="splitBtn">Split</button>
+          </div>
         </div>
       </footer>
     </main>

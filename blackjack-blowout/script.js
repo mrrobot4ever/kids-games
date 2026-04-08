@@ -13,12 +13,9 @@ const els = {
   campaignState: document.getElementById('campaignState'),
   dealerHand: document.getElementById('dealerHand'),
   playerHands: document.getElementById('playerHands'),
-  shoeFill: document.getElementById('shoeFill'),
-  shoeCount: document.getElementById('shoeCount'),
+  playerHandTabs: document.getElementById('playerHandTabs'),
   shoeCountMobile: document.getElementById('shoeCountMobile'),
   shoeStack: document.getElementById('shoeStack'),
-  lastRoundText: document.getElementById('lastRoundText'),
-  roundStateMobile: document.getElementById('roundStateMobile'),
   roundPhaseLabel: document.getElementById('roundPhaseLabel'),
   soundToggle: document.getElementById('soundToggle'),
   dealBtn: document.getElementById('dealBtn'),
@@ -29,6 +26,10 @@ const els = {
   doubleBtn: document.getElementById('doubleBtn'),
   splitBtn: document.getElementById('splitBtn'),
   chipRow: document.getElementById('chipRow'),
+  betModeBtn: document.getElementById('betModeBtn'),
+  playModeBtn: document.getElementById('playModeBtn'),
+  betPanel: document.getElementById('betPanel'),
+  playPanel: document.getElementById('playPanel'),
 };
 
 let audioEnabled = true;
@@ -50,6 +51,8 @@ els.standBtn.addEventListener('click', () => playerAction('stand'));
 els.doubleBtn.addEventListener('click', () => playerAction('double'));
 els.splitBtn.addEventListener('click', () => playerAction('split'));
 els.soundToggle.addEventListener('click', toggleSound);
+els.betModeBtn.addEventListener('click', () => setControlMode('bet'));
+els.playModeBtn.addEventListener('click', () => setControlMode('play'));
 
 function makeFreshState() {
   return {
@@ -360,17 +363,13 @@ function applyThresholds() {
 function render() {
   els.bankrollValue.textContent = money(state.bankroll);
   els.currentBetValue.textContent = money(state.currentBet);
-  els.lastRoundText.textContent = state.lastRound || 'Place your first bet.';
   els.roundPhaseLabel.textContent = humanStatus(state.status);
-  els.roundStateMobile.textContent = humanStatus(state.status);
-  els.campaignState.textContent = state.gameWon ? 'Victory: The table is yours.' : state.bankroll > 900000 ? 'Closing in on a million.' : 'Starting stake: $50,000';
-  const shoePct = Math.max(8, (state.shoe.length / 104) * 100);
-  els.shoeFill.style.width = `${shoePct}%`;
-  els.shoeCount.textContent = `${state.shoe.length} cards`;
-  els.shoeCountMobile.textContent = `${state.shoe.length} cards`;
+  els.campaignState.textContent = state.gameWon ? 'Victory' : state.bankroll > 900000 ? 'Near $1M' : 'Target $1M';
+  els.shoeCountMobile.textContent = `${state.shoe.length}`;
   renderDealer();
   renderPlayerHands();
   updateControls();
+  syncControlMode();
 }
 
 function renderDealer() {
@@ -388,28 +387,45 @@ function renderDealer() {
 
 function renderPlayerHands() {
   els.playerHands.innerHTML = '';
+  els.playerHandTabs.innerHTML = '';
   els.playerSummary.textContent = `${state.playerHands.length} hand${state.playerHands.length === 1 ? '' : 's'}`;
+  if (!state.playerHands.length) {
+    els.playerHands.innerHTML = '<div class="status-toast">No cards on the felt yet.</div>';
+    return;
+  }
+
+  const activeIndex = Math.min(state.activeHandIndex, Math.max(0, state.playerHands.length - 1));
   state.playerHands.forEach((hand, index) => {
     const ev = evaluateHand(hand.cards);
-    const wrap = document.createElement('article');
-    wrap.className = `player-hand ${index === state.activeHandIndex && state.status === 'playerTurn' ? 'active' : ''}`;
-    wrap.innerHTML = `
-      <div class="hand-header">
-        <div>
-          <span class="label">Hand ${index + 1}</span>
-          <strong>${money(hand.bet)} · ${ev.total}${ev.soft ? ' soft' : ''}</strong>
-        </div>
-        ${hand.result ? `<span class="result-tag ${hand.result}">${hand.result}</span>` : ''}
-      </div>
-      <div class="hand-cards"></div>
-    `;
-    const cardsEl = wrap.querySelector('.hand-cards');
-    hand.cards.forEach(card => cardsEl.appendChild(createCardNode(card, false)));
-    els.playerHands.appendChild(wrap);
+    const tab = document.createElement('button');
+    tab.className = `hand-tab ${index === activeIndex ? 'active' : ''}`;
+    tab.textContent = `H${index + 1} · ${ev.total}`;
+    tab.type = 'button';
+    tab.addEventListener('click', () => {
+      state.activeHandIndex = index;
+      render();
+    });
+    els.playerHandTabs.appendChild(tab);
   });
-  if (!state.playerHands.length) {
-    els.playerHands.innerHTML = '<div class="table-message">No cards on the felt yet.</div>';
-  }
+
+  const hand = state.playerHands[activeIndex];
+  const ev = evaluateHand(hand.cards);
+  const wrap = document.createElement('article');
+  wrap.className = `player-hand ${state.status === 'playerTurn' ? 'active' : ''}`;
+  wrap.innerHTML = `
+    <div class="hand-header">
+      <div>
+        <span class="label">Hand ${activeIndex + 1}</span>
+        <strong>${money(hand.bet)} · ${ev.total}${ev.soft ? ' soft' : ''}</strong>
+      </div>
+      ${hand.result ? `<span class="result-tag ${hand.result}">${hand.result}</span>` : ''}
+    </div>
+    <div class="hand-cards"></div>
+  `;
+  const cardsEl = wrap.querySelector('.hand-cards');
+  hand.cards.forEach(card => cardsEl.appendChild(createCardNode(card, false)));
+  els.playerHands.appendChild(wrap);
+  fitCards(cardsEl);
 }
 
 function createCardNode(card, faceDown) {
@@ -446,6 +462,33 @@ function updateControls() {
   els.standBtn.disabled = !(state.status === 'playerTurn' && active && !active.isFinished);
   els.doubleBtn.disabled = !(state.status === 'playerTurn' && active && canDouble(active));
   els.splitBtn.disabled = !(state.status === 'playerTurn' && active && canSplit(active));
+}
+
+function setControlMode(mode) {
+  const betActive = mode === 'bet';
+  els.betModeBtn.classList.toggle('active', betActive);
+  els.playModeBtn.classList.toggle('active', !betActive);
+  els.betPanel.classList.toggle('active', betActive);
+  els.playPanel.classList.toggle('active', !betActive);
+}
+
+function syncControlMode() {
+  setControlMode(state.status === 'playerTurn' ? 'play' : 'bet');
+}
+
+function fitCards(container) {
+  const cards = [...container.children];
+  if (!cards.length) return;
+  container.style.transform = '';
+  const first = cards[0];
+  const width = first.getBoundingClientRect().width;
+  const overlap = Math.abs(parseFloat(getComputedStyle(first).marginLeft)) || 10;
+  const needed = width + Math.max(0, cards.length - 1) * Math.max(8, width - overlap);
+  const max = container.clientWidth - 6;
+  if (needed > max && max > 0) {
+    const scale = Math.max(0.72, max / needed);
+    container.style.transform = `scale(${scale})`;
+  }
 }
 
 function setBanner(text) {

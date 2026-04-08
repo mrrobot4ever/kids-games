@@ -256,6 +256,25 @@ button { font: inherit; }
   text-align: center;
 }
 .status-toast.is-shuffle { color: var(--gold-hi); box-shadow: 0 0 24px rgba(240,211,138,.18); }
+.motion-ribbon {
+  min-width: 0;
+  max-width: 78%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(240,211,138,.14);
+  border: 1px solid rgba(240,211,138,.18);
+  color: var(--gold-hi);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateY(-8px) scale(.98);
+  pointer-events: none;
+}
+.motion-ribbon.show { animation: ribbonIn .8s ease forwards; }
 .player-hand-tabs {
   min-height: 0;
   display: flex;
@@ -461,6 +480,12 @@ button { font: inherit; }
 @keyframes tableSweep {
   0% { transform: translateX(-120%); }
   100% { transform: translateX(120%); }
+}
+@keyframes ribbonIn {
+  0% { opacity: 0; transform: translateY(-8px) scale(.98); }
+  15% { opacity: 1; }
+  70% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(4px) scale(1); }
 }
 @media (max-height: 740px) {
   :root {

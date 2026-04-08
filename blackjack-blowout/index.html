@@ -6,112 +6,69 @@
   <title>Blackjack Blowout</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app-shell" id="appShell">
+  <div class="app-shell">
     <div class="ambient-bg"></div>
-    <div class="table-wrap">
-      <header class="topbar glass-panel">
-        <div class="brand-wrap">
-          <img class="brand-logo" src="./assets/generated/01-logo-plate.png" alt="Blackjack Blowout" />
-          <div>
-            <div class="eyebrow">Monte Carlo Edition</div>
-            <h1>Blackjack Blowout</h1>
-          </div>
-        </div>
-        <div class="top-stats">
-          <div class="stat-pill bankroll-pill"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
-          <div class="stat-pill compact-stat"><span>Shoe</span><strong id="shoeCountMobile">104 cards</strong></div>
-          <button class="icon-btn compact-sound" id="soundToggle" aria-label="Toggle sound">Sound: On</button>
-        </div>
+    <main class="game-layout">
+      <header class="hud-bar glass-panel">
+        <div class="hud-chip brand-chip">BLACKJACK BLOWOUT</div>
+        <div class="hud-chip"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
+        <div class="hud-chip compact"><span>Shoe</span><strong id="shoeCountMobile">104</strong></div>
+        <button class="hud-chip sound-chip" id="soundToggle" aria-label="Toggle sound">Sound On</button>
       </header>
 
-      <main class="table-shell">
-        <section class="side-panel glass-panel desktop-only">
-          <h2>Table Rules</h2>
-          <ul class="rule-list">
-            <li>Double deck blackjack</li>
-            <li>Dealer stands on soft 17</li>
-            <li>Blackjack pays 3:2</li>
-            <li>Double after split allowed</li>
-            <li>No insurance</li>
-            <li>No resplit aces</li>
-          </ul>
-          <div class="shoe-meter">
-            <span>Shoe</span>
-            <div class="meter"><div id="shoeFill"></div></div>
-            <strong id="shoeCount">104 cards</strong>
-          </div>
-          <div class="round-history">
-            <h3>Last Round</h3>
-            <p id="lastRoundText">Place your first bet.</p>
-          </div>
-        </section>
+      <section class="table-frame">
+        <div class="table-surface" id="tableSurface">
+          <img class="table-hero" src="./assets/generated/02-table-hero-bg.png" alt="Luxury blackjack table" />
+          <div class="table-overlay"></div>
 
-        <section class="table-panel">
-          <div class="table-frame">
-            <div class="table-surface" id="tableSurface">
-              <img class="table-hero" src="./assets/generated/02-table-hero-bg.png" alt="Luxury blackjack table" />
-              <div class="table-overlay"></div>
-
-              <div class="status-banner glass-panel" id="statusBanner">Place your bet to begin.</div>
-
-              <div class="mobile-meta-strip glass-panel">
-                <div><span class="mini-label">Round</span><strong id="roundStateMobile">Betting</strong></div>
-                <div><span class="mini-label">Target</span><strong>$1,000,000</strong></div>
+          <div class="table-grid">
+            <section class="dealer-zone zone">
+              <div class="zone-topline">
+                <div class="zone-label-wrap">
+                  <span class="label">Dealer</span>
+                  <strong id="dealerTotal">--</strong>
+                </div>
+                <div class="shoe-stack" id="shoeStack" title="Shoe"></div>
               </div>
+              <div class="hand-row" id="dealerHand"></div>
+            </section>
 
-              <section class="dealer-zone zone">
-                <div class="zone-heading">
-                  <div>
-                    <span class="label">Dealer</span>
-                    <strong id="dealerTotal">--</strong>
-                  </div>
-                  <div class="shoe-stack" id="shoeStack" title="Shoe"></div>
+            <section class="center-zone">
+              <div class="status-banner glass-panel" id="statusBanner">Place your bet to begin.</div>
+              <div class="bet-circle" id="betCircle">
+                <span>Bet</span>
+                <strong id="currentBetValue">$0</strong>
+                <small id="roundPhaseLabel">Betting</small>
+              </div>
+            </section>
+
+            <section class="player-zone zone">
+              <div class="zone-topline">
+                <div class="zone-label-wrap">
+                  <span class="label">Player</span>
+                  <strong id="playerSummary">0 hands</strong>
                 </div>
-                <div class="hand-row" id="dealerHand"></div>
-              </section>
-
-              <section class="table-center">
-                <div class="bet-circle" id="betCircle">
-                  <span>Bet</span>
-                  <strong id="currentBetValue">$0</strong>
-                  <small id="roundPhaseLabel">Betting</small>
-                </div>
-              </section>
-
-              <section class="player-zone zone">
-                <div class="zone-heading">
-                  <div>
-                    <span class="label">Player Hands</span>
-                    <strong id="playerSummary">0 active</strong>
-                  </div>
-                  <div class="campaign-pill" id="campaignState">Target: $1M</div>
-                </div>
-                <div class="hands-grid" id="playerHands"></div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-
-      </main>
-
-      <footer class="control-dock glass-panel">
-        <div class="controls-topline">
-          <div class="control-label" id="tableMessage">Luxury rules. Clean play. Big swings.</div>
-          <div class="bet-controls-inline">
-            <button class="ghost-btn" id="clearBetBtn">Clear</button>
-            <button class="ghost-btn" id="rebetBtn">Rebet</button>
+                <div class="mini-campaign" id="campaignState">Target $1M</div>
+              </div>
+              <div class="hands-grid" id="playerHands"></div>
+            </section>
           </div>
         </div>
+      </section>
+
+      <footer class="control-dock glass-panel">
+        <div class="controls-meta" id="tableMessage">Luxury rules. Clean play. Big swings.</div>
         <div class="chip-row" id="chipRow">
           <button class="chip-btn chip-1000" data-chip="1000">$1K</button>
           <button class="chip-btn chip-2500" data-chip="2500">$2.5K</button>
           <button class="chip-btn chip-5000" data-chip="5000">$5K</button>
-          <button class="primary-btn deal-btn-inline" id="dealBtn">Deal</button>
+          <button class="ghost-btn" id="clearBetBtn">Clear</button>
+          <button class="ghost-btn" id="rebetBtn">Rebet</button>
+          <button class="primary-btn" id="dealBtn">Deal</button>
         </div>
         <div class="action-row">
           <button class="action-btn" id="hitBtn">Hit</button>
@@ -120,7 +77,7 @@
           <button class="action-btn" id="splitBtn">Split</button>
         </div>
       </footer>
-    </div>
+    </main>
   </div>
 
   <script src="./script.js"></script>

@@ -388,6 +388,10 @@ button { font: inherit; }
 .ghost-btn, .action-btn, .primary-btn {
   background: linear-gradient(180deg, #183258, #0c1e3a);
 }
+#standBtn {
+  background: linear-gradient(180deg, #239b56, #166534);
+  border-color: rgba(160, 255, 192, 0.35);
+}
 .primary-btn { background: linear-gradient(180deg, #21518d, #13345c); }
 .chip-btn[disabled], .ghost-btn[disabled], .primary-btn[disabled], .action-btn[disabled], .mode-btn[disabled] {
   opacity: .4;

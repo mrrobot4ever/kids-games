@@ -22,9 +22,9 @@
           </div>
         </div>
         <div class="top-stats">
-          <div class="stat-pill"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
-          <div class="stat-pill"><span>Target</span><strong>$1,000,000</strong></div>
-          <button class="icon-btn" id="soundToggle" aria-label="Toggle sound">Sound: On</button>
+          <div class="stat-pill bankroll-pill"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
+          <div class="stat-pill compact-stat"><span>Shoe</span><strong id="shoeCountMobile">104 cards</strong></div>
+          <button class="icon-btn compact-sound" id="soundToggle" aria-label="Toggle sound">Sound: On</button>
         </div>
       </header>
 
@@ -58,6 +58,11 @@
 
               <div class="status-banner glass-panel" id="statusBanner">Place your bet to begin.</div>
 
+              <div class="mobile-meta-strip glass-panel">
+                <div><span class="mini-label">Round</span><strong id="roundStateMobile">Betting</strong></div>
+                <div><span class="mini-label">Target</span><strong>$1,000,000</strong></div>
+              </div>
+
               <section class="dealer-zone zone">
                 <div class="zone-heading">
                   <div>
@@ -71,11 +76,10 @@
 
               <section class="table-center">
                 <div class="bet-circle" id="betCircle">
-                  <span>Current Bet</span>
+                  <span>Bet</span>
                   <strong id="currentBetValue">$0</strong>
                   <small id="roundPhaseLabel">Betting</small>
                 </div>
-                <div class="table-message" id="tableMessage">Luxury rules. Clean play. Big swings.</div>
               </section>
 
               <section class="player-zone zone">
@@ -84,7 +88,7 @@
                     <span class="label">Player Hands</span>
                     <strong id="playerSummary">0 active</strong>
                   </div>
-                  <div class="campaign-pill" id="campaignState">Starting stake: $50,000</div>
+                  <div class="campaign-pill" id="campaignState">Target: $1M</div>
                 </div>
                 <div class="hands-grid" id="playerHands"></div>
               </section>
@@ -92,47 +96,28 @@
           </div>
         </section>
 
-        <section class="side-panel glass-panel mobile-secondary">
-          <div class="mini-grid">
-            <div>
-              <span class="mini-label">Shoe</span>
-              <strong id="shoeCountMobile">104 cards</strong>
-            </div>
-            <div>
-              <span class="mini-label">Round</span>
-              <strong id="roundStateMobile">Betting</strong>
-            </div>
-          </div>
-        </section>
+
       </main>
 
-      <footer class="control-dock">
-        <div class="betting-panel glass-panel">
-          <div class="panel-header">
-            <span>Betting Tray</span>
-            <div class="bet-controls-inline">
-              <button class="ghost-btn" id="clearBetBtn">Clear</button>
-              <button class="ghost-btn" id="rebetBtn">Rebet</button>
-            </div>
-          </div>
-          <div class="chip-row" id="chipRow">
-            <button class="chip-btn chip-1000" data-chip="1000">$1K</button>
-            <button class="chip-btn chip-2500" data-chip="2500">$2.5K</button>
-            <button class="chip-btn chip-5000" data-chip="5000">$5K</button>
-          </div>
-          <div class="deal-row">
-            <button class="primary-btn" id="dealBtn">Deal Cards</button>
+      <footer class="control-dock glass-panel">
+        <div class="controls-topline">
+          <div class="control-label" id="tableMessage">Luxury rules. Clean play. Big swings.</div>
+          <div class="bet-controls-inline">
+            <button class="ghost-btn" id="clearBetBtn">Clear</button>
+            <button class="ghost-btn" id="rebetBtn">Rebet</button>
           </div>
         </div>
-
-        <div class="action-panel glass-panel">
-          <div class="panel-header"><span>Actions</span></div>
-          <div class="action-row">
-            <button class="action-btn" id="hitBtn">Hit</button>
-            <button class="action-btn" id="standBtn">Stand</button>
-            <button class="action-btn" id="doubleBtn">Double</button>
-            <button class="action-btn" id="splitBtn">Split</button>
-          </div>
+        <div class="chip-row" id="chipRow">
+          <button class="chip-btn chip-1000" data-chip="1000">$1K</button>
+          <button class="chip-btn chip-2500" data-chip="2500">$2.5K</button>
+          <button class="chip-btn chip-5000" data-chip="5000">$5K</button>
+          <button class="primary-btn deal-btn-inline" id="dealBtn">Deal</button>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" id="hitBtn">Hit</button>
+          <button class="action-btn" id="standBtn">Stand</button>
+          <button class="action-btn" id="doubleBtn">Double</button>
+          <button class="action-btn" id="splitBtn">Split</button>
         </div>
       </footer>
     </div>

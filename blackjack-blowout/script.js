@@ -5,6 +5,7 @@ const CHIP_VALUES = [1000, 2500, 5000];
 
 const els = {
   bankrollValue: document.getElementById('bankrollValue'),
+  bankrollDelta: document.getElementById('bankrollDelta'),
   currentBetValue: document.getElementById('currentBetValue'),
   dealerTotal: document.getElementById('dealerTotal'),
   playerSummary: document.getElementById('playerSummary'),
@@ -30,6 +31,8 @@ const els = {
   playModeBtn: document.getElementById('playModeBtn'),
   betPanel: document.getElementById('betPanel'),
   playPanel: document.getElementById('playPanel'),
+  betCircle: document.getElementById('betCircle'),
+  tableSurface: document.getElementById('tableSurface'),
 };
 
 let audioEnabled = true;
@@ -83,9 +86,7 @@ function coerceState(s) {
 function createDoubleDeck() {
   const deck = [];
   for (let d = 0; d < 2; d++) {
-    for (const suit of SUITS) {
-      for (const rank of RANKS) deck.push({ rank, suit });
-    }
+    for (const suit of SUITS) for (const rank of RANKS) deck.push({ rank, suit });
   }
   return deck;
 }
@@ -105,8 +106,7 @@ function drawCard() {
 }
 
 function evaluateHand(cards) {
-  let total = 0;
-  let aceCount = 0;
+  let total = 0, aceCount = 0;
   for (const card of cards) {
     if (card.rank === 'A') { total += 11; aceCount++; }
     else if (['K', 'Q', 'J'].includes(card.rank)) total += 10;
@@ -118,8 +118,7 @@ function evaluateHand(cards) {
 }
 
 function isNaturalBlackjack(hand) {
-  const ev = evaluateHand(hand.cards);
-  return ev.blackjack && !hand.isSplitHand;
+  return evaluateHand(hand.cards).blackjack && !hand.isSplitHand;
 }
 
 function createHand(bet) {
@@ -131,20 +130,28 @@ function addChip(value) {
   if (!CHIP_VALUES.includes(value)) return;
   if (state.currentBet + value > state.bankroll) return setBanner('Not enough chips for that bet.');
   state.currentBet += value;
-  playTone(480, 0.04, 'triangle');
+  playChipClick();
+  playChipStack();
+  pulseBetCircle();
+  if (state.currentBet % 1000 === 0) setBanner(`Bet set: ${money(state.currentBet)}`);
   persistAndRender();
 }
 
 function clearBet() {
   if (state.status !== 'betting') return;
   state.currentBet = 0;
+  playSoftDecision();
+  setBanner('Bet cleared.');
   persistAndRender();
 }
 
 function rebet() {
   if (state.status !== 'betting' || !state.previousBet) return;
-  if (state.previousBet > state.bankroll) return setBanner('Previous bet is too rich for current bankroll.');
+  if (state.previousBet > state.bankroll) return setBanner('Previous stake is too rich.');
   state.currentBet = state.previousBet;
+  playChipStack();
+  pulseBetCircle();
+  setBanner('Previous stake restored.');
   persistAndRender();
 }
 
@@ -153,19 +160,18 @@ function ensureShoeBeforeRound() {
     state.shoe = shuffle(createDoubleDeck());
     state.needsShuffle = true;
     playShuffleAnimation();
-  } else {
-    state.needsShuffle = false;
-  }
+  } else state.needsShuffle = false;
 }
 
 function startRound() {
   if (state.status !== 'betting') return;
-  if (state.currentBet <= 0) return setBanner('Place a bet first.');
+  if (state.currentBet <= 0) return setBanner('Place your wager.');
   if (state.currentBet > state.bankroll) return setBanner('Bet exceeds bankroll.');
 
   ensureShoeBeforeRound();
   state.status = 'initialDeal';
   state.bankroll -= state.currentBet;
+  showBankrollDelta(-state.currentBet, 'negative');
   state.previousBet = state.currentBet;
   state.dealer = { cards: [] };
   state.playerHands = [createHand(state.currentBet)];
@@ -180,23 +186,20 @@ function startRound() {
     settleRound();
   } else {
     state.status = 'playerTurn';
-    setBanner('Player turn. Choose your move.');
+    setBanner('Your move.');
   }
   persistAndRender();
 }
 
 function dealCardTo(target) {
   target.cards.push(drawCard());
-  playTone(260, 0.03, 'square');
+  playCardDeal();
 }
 
 function checkNaturals() {
   const player = state.playerHands[0];
-  const dealer = { cards: state.dealer.cards };
-  if (isNaturalBlackjack(player) || isNaturalBlackjack(dealer)) {
-    state.status = 'dealerTurn';
-    return true;
-  }
+  const dealer = { cards: state.dealer.cards, isSplitHand: false };
+  if (isNaturalBlackjack(player) || isNaturalBlackjack(dealer)) { state.status = 'dealerTurn'; return true; }
   return false;
 }
 
@@ -208,78 +211,61 @@ function playerAction(action) {
   if (action === 'hit') {
     if (!canHit(hand)) return;
     dealCardTo(hand);
-    if (evaluateHand(hand.cards).bust) {
-      hand.isFinished = true;
-      hand.result = 'bust';
-      advanceTurn();
-    }
+    const ev = evaluateHand(hand.cards);
+    if (ev.bust) {
+      hand.isFinished = true; hand.result = 'bust'; setBanner('Too much heat.'); advanceTurn();
+    } else if (ev.total >= 17) setBanner(`${ev.total}. Strong spot.`);
+    else setBanner(`${ev.total}. Still clean.`);
   }
 
   if (action === 'stand') {
     hand.isFinished = true;
+    playSoftDecision();
+    setBanner(`Stand on ${evaluateHand(hand.cards).total}.`);
     advanceTurn();
   }
 
   if (action === 'double') {
     if (!canDouble(hand)) return;
     state.bankroll -= hand.bet;
+    showBankrollDelta(-hand.bet, 'negative');
     hand.bet *= 2;
     hand.hasDoubled = true;
+    playDoubleSound();
     dealCardTo(hand);
     hand.isFinished = true;
-    playTone(190, 0.07, 'sawtooth');
     if (evaluateHand(hand.cards).bust) hand.result = 'bust';
+    setBanner('Pressed the edge.');
     advanceTurn();
   }
 
   if (action === 'split') {
     if (!canSplit(hand)) return;
     state.bankroll -= hand.bet;
+    showBankrollDelta(-hand.bet, 'negative');
     const [c1, c2] = hand.cards;
     const aceSplit = c1.rank === 'A' && c2.rank === 'A';
-    const h1 = createHand(hand.bet);
-    const h2 = createHand(hand.bet);
+    const h1 = createHand(hand.bet), h2 = createHand(hand.bet);
     h1.isSplitHand = h2.isSplitHand = true;
     h1.splitFromAces = h2.splitFromAces = aceSplit;
-    h1.cards = [c1];
-    h2.cards = [c2];
-    dealCardTo(h1);
-    dealCardTo(h2);
-    if (aceSplit) {
-      h1.isFinished = true;
-      h2.isFinished = true;
-    }
+    h1.cards = [c1]; h2.cards = [c2];
+    dealCardTo(h1); dealCardTo(h2);
+    if (aceSplit) { h1.isFinished = true; h2.isFinished = true; }
     state.playerHands.splice(state.activeHandIndex, 1, h1, h2);
-    playTone(520, 0.05, 'triangle');
-    if (aceSplit) {
-      advanceTurn();
-    }
+    playSplitSound();
+    setBanner(aceSplit ? 'Split aces. One card each.' : 'Split live. Play both lines.');
+    if (aceSplit) advanceTurn();
   }
 
   persistAndRender();
 }
 
-function canHit(hand) {
-  if (hand.hasDoubled || hand.isFinished) return false;
-  if (hand.splitFromAces) return false;
-  return true;
-}
-
-function canDouble(hand) {
-  return hand.cards.length === 2 && !hand.hasDoubled && !hand.isFinished && state.bankroll >= hand.bet && !hand.splitFromAces;
-}
-
-function canSplit(hand) {
-  if (hand.cards.length !== 2) return false;
-  if (state.bankroll < hand.bet) return false;
-  if (hand.splitFromAces) return false;
-  return hand.cards[0].rank === hand.cards[1].rank;
-}
+function canHit(hand) { return !hand.hasDoubled && !hand.isFinished && !hand.splitFromAces; }
+function canDouble(hand) { return hand.cards.length === 2 && !hand.hasDoubled && !hand.isFinished && state.bankroll >= hand.bet && !hand.splitFromAces; }
+function canSplit(hand) { return hand.cards.length === 2 && state.bankroll >= hand.bet && !hand.splitFromAces && hand.cards[0].rank === hand.cards[1].rank; }
 
 function advanceTurn() {
-  while (state.activeHandIndex < state.playerHands.length && state.playerHands[state.activeHandIndex].isFinished) {
-    state.activeHandIndex++;
-  }
+  while (state.activeHandIndex < state.playerHands.length && state.playerHands[state.activeHandIndex].isFinished) state.activeHandIndex++;
   if (state.activeHandIndex >= state.playerHands.length) {
     state.status = 'dealerTurn';
     playDealer();
@@ -290,22 +276,19 @@ function advanceTurn() {
 function playDealer() {
   const liveHands = state.playerHands.filter(h => !evaluateHand(h.cards).bust);
   if (!liveHands.length) return;
+  setBanner('Dealer plays out.');
+  playDealerReveal();
   while (true) {
     const ev = evaluateHand(state.dealer.cards);
-    if (ev.total < 17) {
-      dealCardTo(state.dealer);
-      continue;
-    }
+    if (ev.total < 17) { dealCardTo(state.dealer); continue; }
     break;
   }
 }
 
 function settlementReturn(hand) {
-  const player = evaluateHand(hand.cards);
-  const dealer = evaluateHand(state.dealer.cards);
+  const player = evaluateHand(hand.cards), dealer = evaluateHand(state.dealer.cards);
   const playerBJ = isNaturalBlackjack(hand);
   const dealerBJ = state.playerHands.length === 1 && isNaturalBlackjack({ cards: state.dealer.cards, isSplitHand: false });
-
   if (playerBJ || dealerBJ) {
     if (playerBJ && dealerBJ) return { result: 'push', bankrollDelta: hand.bet };
     if (playerBJ) return { result: 'blackjack', bankrollDelta: hand.bet * 2.5 };
@@ -320,6 +303,7 @@ function settlementReturn(hand) {
 
 function settleRound() {
   state.status = 'roundOver';
+  const bankrollBefore = state.bankroll;
   const outcomes = [];
   let net = 0;
   for (const hand of state.playerHands) {
@@ -336,28 +320,21 @@ function settleRound() {
   }
   state.stats.roundsPlayed++;
   state.lastRound = summarizeRound(outcomes, net);
+  if (state.bankroll !== bankrollBefore) showBankrollDelta(state.bankroll - bankrollBefore, state.bankroll >= bankrollBefore ? 'positive' : 'negative');
   applyThresholds();
   state.currentBet = 0;
   if (!state.gameWon) state.status = 'betting';
-  setBanner(state.lastRound);
+  setBanner(statusCopyFromOutcomes(outcomes));
   playResultSound(outcomes);
 }
 
 function summarizeRound(outcomes, net) {
-  const summary = `${outcomes.map(o => o.toUpperCase()).join(' / ')} · ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}`;
-  return summary;
+  return `${outcomes.map(o => o.toUpperCase()).join(' / ')} · ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}`;
 }
 
 function applyThresholds() {
-  if (state.bankroll < 1000) {
-    state.bankroll = 50000;
-    state.lastRound += ' · Bankroll reset to $50,000';
-  }
-  if (state.bankroll > 1000000) {
-    state.gameWon = true;
-    state.status = 'gameWon';
-    state.lastRound += ' · You broke the house.';
-  }
+  if (state.bankroll < 1000) { state.bankroll = 50000; state.lastRound += ' · Bankroll reset to $50,000'; }
+  if (state.bankroll > 1000000) { state.gameWon = true; state.status = 'gameWon'; state.lastRound += ' · The table is yours.'; }
 }
 
 function render() {
@@ -377,11 +354,10 @@ function renderDealer() {
   const hideHole = state.status === 'playerTurn' || state.status === 'initialDeal';
   state.dealer.cards.forEach((card, index) => {
     const node = createCardNode(card, hideHole && index === 1);
+    if (!hideHole && index === 1) node.classList.add('revealing');
     els.dealerHand.appendChild(node);
   });
-  if (!state.dealer.cards.length) {
-    els.dealerHand.innerHTML = '<div class="table-message">Dealer is waiting.</div>';
-  }
+  if (!state.dealer.cards.length) els.dealerHand.innerHTML = '<div class="status-toast">Dealer is waiting.</div>';
   els.dealerTotal.textContent = state.dealer.cards.length ? (hideHole ? cardLabel(state.dealer.cards[0]) + ' + ?' : evaluateHand(state.dealer.cards).total) : '--';
 }
 
@@ -389,11 +365,7 @@ function renderPlayerHands() {
   els.playerHands.innerHTML = '';
   els.playerHandTabs.innerHTML = '';
   els.playerSummary.textContent = `${state.playerHands.length} hand${state.playerHands.length === 1 ? '' : 's'}`;
-  if (!state.playerHands.length) {
-    els.playerHands.innerHTML = '<div class="status-toast">No cards on the felt yet.</div>';
-    return;
-  }
-
+  if (!state.playerHands.length) { els.playerHands.innerHTML = '<div class="status-toast">No cards on the felt yet.</div>'; return; }
   const activeIndex = Math.min(state.activeHandIndex, Math.max(0, state.playerHands.length - 1));
   state.playerHands.forEach((hand, index) => {
     const ev = evaluateHand(hand.cards);
@@ -401,17 +373,13 @@ function renderPlayerHands() {
     tab.className = `hand-tab ${index === activeIndex ? 'active' : ''}`;
     tab.textContent = `H${index + 1} · ${ev.total}`;
     tab.type = 'button';
-    tab.addEventListener('click', () => {
-      state.activeHandIndex = index;
-      render();
-    });
+    tab.addEventListener('click', () => { state.activeHandIndex = index; render(); });
     els.playerHandTabs.appendChild(tab);
   });
-
   const hand = state.playerHands[activeIndex];
   const ev = evaluateHand(hand.cards);
   const wrap = document.createElement('article');
-  wrap.className = `player-hand ${state.status === 'playerTurn' ? 'active' : ''}`;
+  wrap.className = `player-hand ${state.status === 'playerTurn' ? 'active' : ''} ${hand.result || ''}`;
   wrap.innerHTML = `
     <div class="hand-header">
       <div>
@@ -423,7 +391,7 @@ function renderPlayerHands() {
     <div class="hand-cards"></div>
   `;
   const cardsEl = wrap.querySelector('.hand-cards');
-  hand.cards.forEach(card => cardsEl.appendChild(createCardNode(card, false)));
+  hand.cards.forEach(card => { const n = createCardNode(card, false); n.classList.add('dealing'); cardsEl.appendChild(n); });
   els.playerHands.appendChild(wrap);
   fitCards(cardsEl);
 }
@@ -435,19 +403,7 @@ function createCardNode(card, faceDown) {
   const suitMap = { S: '♠', H: '♥', D: '♦', C: '♣' };
   const red = card.suit === 'H' || card.suit === 'D';
   node.classList.toggle('red', red);
-  node.innerHTML = `
-    <div class="card-inner">
-      <div>
-        <div class="card-value">${card.rank}</div>
-        <div class="card-suit">${suitMap[card.suit]}</div>
-      </div>
-      <div class="card center-mark ${red ? 'red' : ''}">${suitMap[card.suit]}</div>
-      <div style="transform: rotate(180deg); align-self: flex-end; text-align: right;">
-        <div class="card-value">${card.rank}</div>
-        <div class="card-suit">${suitMap[card.suit]}</div>
-      </div>
-    </div>
-  `;
+  node.innerHTML = `<div class="card-inner"><div><div class="card-value">${card.rank}</div><div class="card-suit">${suitMap[card.suit]}</div></div><div class="card center-mark ${red ? 'red' : ''}">${suitMap[card.suit]}</div><div style="transform: rotate(180deg); align-self: flex-end; text-align: right;"><div class="card-value">${card.rank}</div><div class="card-suit">${suitMap[card.suit]}</div></div></div>`;
   return node;
 }
 
@@ -471,102 +427,99 @@ function setControlMode(mode) {
   els.betPanel.classList.toggle('active', betActive);
   els.playPanel.classList.toggle('active', !betActive);
 }
-
-function syncControlMode() {
-  setControlMode(state.status === 'playerTurn' ? 'play' : 'bet');
-}
+function syncControlMode() { setControlMode(state.status === 'playerTurn' ? 'play' : 'bet'); }
 
 function fitCards(container) {
   const cards = [...container.children];
   if (!cards.length) return;
   container.style.transform = '';
-  const first = cards[0];
-  const width = first.getBoundingClientRect().width;
+  const first = cards[0], width = first.getBoundingClientRect().width;
   const overlap = Math.abs(parseFloat(getComputedStyle(first).marginLeft)) || 10;
   const needed = width + Math.max(0, cards.length - 1) * Math.max(8, width - overlap);
   const max = container.clientWidth - 6;
-  if (needed > max && max > 0) {
-    const scale = Math.max(0.72, max / needed);
-    container.style.transform = `scale(${scale})`;
-  }
+  if (needed > max && max > 0) container.style.transform = `scale(${Math.max(0.72, max / needed)})`;
 }
 
-function setBanner(text) {
-  els.statusBanner.textContent = text;
-  els.tableMessage.textContent = text;
+function pulseBetCircle() {
+  els.betCircle.classList.remove('pulse');
+  void els.betCircle.offsetWidth;
+  els.betCircle.classList.add('pulse');
 }
 
-function humanStatus(status) {
-  return ({ betting: 'Betting', initialDeal: 'Dealing', playerTurn: 'Player Turn', dealerTurn: 'Dealer Turn', roundOver: 'Round Over', gameWon: 'Victory' })[status] || status;
+function showBankrollDelta(amount, tone) {
+  if (!amount) return;
+  els.bankrollDelta.textContent = `${amount > 0 ? '+' : '-'}${money(Math.abs(amount))}`;
+  els.bankrollDelta.className = `bankroll-delta ${tone} show`;
+  setTimeout(() => { els.bankrollDelta.className = 'bankroll-delta'; }, 900);
 }
 
+function spawnFloatDelta(text, tone = 'positive') {
+  const el = document.createElement('div');
+  el.className = `float-delta ${tone} show`;
+  el.textContent = text;
+  els.betCircle.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function statusCopyFromOutcomes(outcomes) {
+  if (state.gameWon) return 'The table is yours.';
+  if (outcomes.includes('blackjack')) return 'Blackjack. Premium paid.';
+  if (outcomes.includes('win')) return 'Dealer pays.';
+  if (outcomes.every(o => o === 'push')) return 'Push. Chips hold.';
+  if (outcomes.every(o => o === 'lose' || o === 'bust')) return 'House takes it.';
+  return state.lastRound;
+}
+
+function setBanner(text) { els.statusBanner.textContent = text; els.tableMessage.textContent = text; }
+function humanStatus(status) { return ({ betting: 'Betting', initialDeal: 'Dealing', playerTurn: 'Your Move', dealerTurn: 'Dealer', roundOver: 'Round Over', gameWon: 'Victory' })[status] || status; }
 function money(n) { return `$${Math.round(n).toLocaleString()}`; }
 function cardLabel(card) { return `${card.rank}${card.suit}`; }
 
-function persistAndRender() {
-  saveGame();
-  render();
-}
+function persistAndRender() { saveGame(); render(); }
+function saveGame() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function loadGame() { try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }
 
-function saveGame() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function loadGame() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function toggleSound() {
-  audioEnabled = !audioEnabled;
-  els.soundToggle.textContent = `Sound: ${audioEnabled ? 'On' : 'Off'}`;
-}
-
-function ensureAudio() {
-  if (!audioEnabled) return null;
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function playTone(freq, duration, type = 'sine') {
-  const ctx = ensureAudio();
-  if (!ctx) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  gain.gain.value = 0.0001;
-  osc.connect(gain);
-  gain.connect(ctx.destination);
+function toggleSound() { audioEnabled = !audioEnabled; els.soundToggle.textContent = `Sound ${audioEnabled ? 'On' : 'Off'}`; }
+function ensureAudio() { if (!audioEnabled) return null; if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+function playTone(freq, duration, type = 'sine', gainAmount = 0.06, glideTo = null) {
+  const ctx = ensureAudio(); if (!ctx) return;
+  const osc = ctx.createOscillator(); const gain = ctx.createGain();
+  osc.type = type; osc.frequency.value = freq;
   const t = ctx.currentTime;
-  gain.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+  if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t + duration);
+  gain.gain.value = 0.0001; osc.connect(gain); gain.connect(ctx.destination);
+  gain.gain.exponentialRampToValueAtTime(gainAmount, t + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-  osc.start(t);
-  osc.stop(t + duration + 0.02);
+  osc.start(t); osc.stop(t + duration + 0.02);
 }
+function playChipClick() { playTone(900, 0.018, 'triangle', 0.035); setTimeout(() => playTone(2200, 0.01, 'square', 0.02), 8); }
+function playChipStack() { playTone(180, 0.05, 'sine', 0.03); }
+function playCardDeal() { playTone(320, 0.02, 'square', 0.028); setTimeout(() => playTone(180, 0.04, 'triangle', 0.02), 12); }
+function playDealerReveal() { playTone(420, 0.12, 'triangle', 0.03, 620); }
+function playSoftDecision() { playTone(240, 0.04, 'sine', 0.022); }
+function playDoubleSound() { playTone(150, 0.07, 'sine', 0.03); setTimeout(() => playTone(520, 0.04, 'triangle', 0.025), 40); }
+function playSplitSound() { playTone(540, 0.04, 'triangle', 0.028); setTimeout(() => playTone(700, 0.05, 'triangle', 0.025), 60); }
+function playPushSound() { playTone(280, 0.05, 'sine', 0.025); setTimeout(() => playTone(320, 0.05, 'sine', 0.02), 60); }
+function playVictorySound() { [440,660,880,990].forEach((f,i)=>setTimeout(()=>playTone(f,0.18,'triangle',0.03), i*120)); }
 
 function playResultSound(outcomes) {
+  if (state.gameWon) { playVictorySound(); return; }
   if (outcomes.includes('blackjack')) {
-    playTone(660, 0.08, 'triangle');
-    setTimeout(() => playTone(880, 0.12, 'triangle'), 80);
+    playTone(660, 0.08, 'triangle', 0.03); setTimeout(() => playTone(880, 0.12, 'triangle', 0.03), 70); setTimeout(() => playTone(1100, 0.08, 'sine', 0.024), 150); spawnFloatDelta('BLACKJACK', 'positive');
   } else if (outcomes.includes('win')) {
-    playTone(520, 0.08, 'triangle');
+    playTone(520, 0.07, 'triangle', 0.03); setTimeout(() => playTone(660, 0.09, 'triangle', 0.026), 80); spawnFloatDelta('PAID', 'positive');
+  } else if (outcomes.every(o => o === 'push')) {
+    playPushSound(); spawnFloatDelta('PUSH', 'neutral');
   } else if (outcomes.every(o => o === 'lose' || o === 'bust')) {
-    playTone(140, 0.12, 'sawtooth');
-  } else {
-    playTone(300, 0.06, 'square');
-  }
+    playTone(220, 0.12, 'sawtooth', 0.026, 120); spawnFloatDelta('HOUSE', 'negative');
+  } else playTone(300, 0.06, 'square', 0.022);
 }
 
 function playShuffleAnimation() {
-  els.shoeStack.classList.add('shoe-shuffling');
-  setBanner('Shuffling the shoe...');
-  playTone(220, 0.08, 'sawtooth');
-  setTimeout(() => playTone(180, 0.08, 'sawtooth'), 120);
-  setTimeout(() => playTone(250, 0.08, 'sawtooth'), 240);
-  setTimeout(() => els.shoeStack.classList.remove('shoe-shuffling'), 1600);
+  els.shoeStack.classList.add('shoe-shuffling-premium');
+  els.tableSurface.classList.add('is-ceremony');
+  els.statusBanner.classList.add('is-shuffle');
+  setBanner('Fresh shoe. New fortunes.');
+  playTone(190, 0.08, 'sawtooth', 0.024); setTimeout(() => playTone(150, 0.08, 'sawtooth', 0.024), 120); setTimeout(() => playTone(420, 0.05, 'triangle', 0.026), 240);
+  setTimeout(() => { els.shoeStack.classList.remove('shoe-shuffling-premium'); els.tableSurface.classList.remove('is-ceremony'); els.statusBanner.classList.remove('is-shuffle'); }, 900);
 }

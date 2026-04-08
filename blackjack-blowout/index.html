@@ -15,7 +15,7 @@
     <main class="game">
       <header class="topbar glass-panel">
         <div class="top-pill brand-pill">BLACKJACK BLOWOUT</div>
-        <div class="top-pill"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong></div>
+        <div class="top-pill bankroll-pill-wrap"><span>Bankroll</span><strong id="bankrollValue">$50,000</strong><span class="bankroll-delta" id="bankrollDelta"></span></div>
         <div class="top-pill"><span>Shoe</span><strong id="shoeCountMobile">104</strong></div>
         <button class="top-pill sound-pill" id="soundToggle">Sound On</button>
       </header>
@@ -23,6 +23,8 @@
       <section class="table glass-panel" id="tableSurface">
         <img class="table-hero" src="./assets/generated/02-table-hero-bg.png" alt="Luxury blackjack table" />
         <div class="table-overlay"></div>
+
+        <div class="deal-origin" id="dealOrigin" aria-hidden="true"></div>
 
         <section class="hand-area dealer-area">
           <div class="hand-head">
